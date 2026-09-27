@@ -186,6 +186,63 @@ class OrganisasiTest extends TestCase
         $this->get('/lso')->assertOk()->assertDontSee('LSO Lama', false);
     }
 
+    public function test_daftar_lso_tetap_terbuka_meski_ada_unit_tanpa_slug(): void
+    {
+        $satunya = $this->lso('LSO Ber-slug');
+        $polos = $this->lso('LSO Tanpa Slug');
+
+        /*
+         * Ditulis lewat kueri, bukan lewat model: pengait model akan segera
+         * mengisi slug yang kosong, dan justru keadaan rusak itulah yang perlu
+         * diuji di sini.
+         *
+         * Inilah yang pernah mematikan seluruh /lso di produksi —
+         * route('public.lso.detail', null) melempar UrlGenerationException,
+         * dan satu unit tanpa slug menjatuhkan halaman daftarnya.
+         */
+        \Illuminate\Support\Facades\DB::table('organisation_units')
+            ->where('id', $polos->id)
+            ->update(['slug' => null]);
+
+        $halaman = $this->get('/lso')->assertOk();
+
+        // Unit tanpa slug tetap tampil — hanya saja tidak bertaut.
+        $halaman->assertSee('LSO Tanpa Slug', false);
+        $halaman->assertSee('/lso/'.$satunya->slug, false);
+    }
+
+    public function test_migrasi_pengisi_slug_membereskan_unit_yang_belum_berslug(): void
+    {
+        $unit = $this->lso('LSO Belum Berslug');
+
+        \Illuminate\Support\Facades\DB::table('organisation_units')
+            ->where('id', $unit->id)
+            ->update(['slug' => null]);
+
+        $migrasi = require database_path('migrations/2026_09_27_220000_backfill_unit_slugs.php');
+        $migrasi->up();
+
+        $this->assertSame('lso-belum-berslug', $unit->fresh()->slug);
+    }
+
+    public function test_migrasi_pengisi_slug_tidak_menabrak_slug_yang_sudah_dipakai(): void
+    {
+        $adaSlug = $this->lso('LSO Kembar');
+        $belum = $this->lso('LSO Kembar Lain');
+
+        $this->assertSame('lso-kembar', $adaSlug->slug);
+
+        // Nama yang sama dengan yang sudah berslug, tetapi barisnya dikosongkan.
+        \Illuminate\Support\Facades\DB::table('organisation_units')
+            ->where('id', $belum->id)
+            ->update(['nama' => 'LSO Kembar', 'slug' => null]);
+
+        $migrasi = require database_path('migrations/2026_09_27_220000_backfill_unit_slugs.php');
+        $migrasi->up();
+
+        $this->assertSame('lso-kembar-2', $belum->fresh()->slug);
+    }
+
     public function test_halaman_galeri_dapat_dibuka(): void
     {
         $this->get('/galeri')->assertOk();

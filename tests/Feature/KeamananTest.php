@@ -76,6 +76,39 @@ class KeamananTest extends TestCase
         $this->assertNotNull($user->email_verified_at);
     }
 
+    /**
+     * Variabel lingkungan yang DIBIARKAN KOSONG bukan berarti "pakai nilai
+     * bawaan".
+     *
+     * Hosting menyimpannya sebagai string kosong, dan env() mengembalikan
+     * string kosong itu alih-alih nilai bawaannya. Kalau tidak dijaga, akun
+     * superadmin terbuat dengan email atau kata sandi kosong: akunnya ada,
+     * situsnya menyala, tetapi tidak ada yang bisa masuk — dan tanpa akses
+     * shell tidak ada cara memperbaikinya dari dalam.
+     */
+    public function test_seeder_superadmin_menolak_kredensial_kosong(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $asli = [
+            'SEED_SUPERADMIN_EMAIL' => getenv('SEED_SUPERADMIN_EMAIL'),
+            'SEED_SUPERADMIN_PASSWORD' => getenv('SEED_SUPERADMIN_PASSWORD'),
+        ];
+
+        putenv('SEED_SUPERADMIN_EMAIL=');
+        putenv('SEED_SUPERADMIN_PASSWORD=');
+
+        try {
+            $this->seed(SuperadminSeeder::class);
+        } finally {
+            foreach ($asli as $kunci => $nilai) {
+                $nilai === false ? putenv($kunci) : putenv("{$kunci}={$nilai}");
+            }
+        }
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
