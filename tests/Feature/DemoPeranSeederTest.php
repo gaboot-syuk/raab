@@ -42,6 +42,53 @@ class DemoPeranSeederTest extends TestCase
     }
 
     /**
+     * Menyetel variabel lingkungan seperti hosting sungguhan.
+     *
+     * putenv() saja TIDAK cukup. Laravel membaca lewat beberapa adaptor
+     * ($_SERVER, $_ENV, getenv) dan yang ditemukan lebih dulu itulah yang
+     * menang. Uji yang hanya memakai putenv() bisa lolos di satu mesin dan
+     * gagal di mesin lain — dan gagalnya menyesatkan: seeder tampak menolak
+     * berjalan, padahal yang salah adalah cara ujinya menyetel nilai.
+     *
+     * @param  array<string, string>  $nilai
+     * @return array<string, string|null>  Nilai asli, untuk dipulihkan.
+     */
+    private function setelEnv(array $nilai): array
+    {
+        $asli = [];
+
+        foreach ($nilai as $kunci => $isi) {
+            $lama = getenv($kunci);
+            $asli[$kunci] = $_SERVER[$kunci] ?? $_ENV[$kunci] ?? ($lama === false ? null : $lama);
+
+            putenv("{$kunci}={$isi}");
+            $_ENV[$kunci] = $isi;
+            $_SERVER[$kunci] = $isi;
+        }
+
+        return $asli;
+    }
+
+    /**
+     * @param  array<string, string|null>  $asli
+     */
+    private function pulihkanEnv(array $asli): void
+    {
+        foreach ($asli as $kunci => $isi) {
+            if ($isi === null) {
+                putenv($kunci);
+                unset($_ENV[$kunci], $_SERVER[$kunci]);
+
+                continue;
+            }
+
+            putenv("{$kunci}={$isi}");
+            $_ENV[$kunci] = $isi;
+            $_SERVER[$kunci] = $isi;
+        }
+    }
+
+    /**
      * Akun anggota demo dibuat dari anggota yang SUDAH ada.
      *
      * Seeder tidak membuat anggota baru dari nol: anggota tanpa iuran, poin,
@@ -186,15 +233,29 @@ class DemoPeranSeederTest extends TestCase
     {
         app()->detectEnvironment(fn () => 'production');
 
-        putenv('APP_JALANKAN_SEED_DEMO=true');
-        putenv('SEED_DEMO_PASSWORD=SandiUjiProduksi2026');
+        $asli = $this->setelEnv([
+            'APP_JALANKAN_SEED_DEMO' => 'true',
+            'SEED_DEMO_PASSWORD' => 'SandiUjiProduksi2026',
+        ]);
 
         try {
+            /*
+             * Jebakan yang membuat sakelar ini tidak pernah terbaca: env()
+             * TIDAK mengembalikan nilai apa adanya — 'true' dan 'false'
+             * diubahnya menjadi boolean sungguhan. Perbandingan terhadap string
+             * 'true' karena itu selalu salah.
+             *
+             * Diperiksa di sini supaya perilakunya tetap terjaga: kalau suatu
+             * saat Laravel berhenti mengubahnya, seeder tetap benar karena
+             * memakai filter_var(), tetapi uji ini perlu ditinjau ulang.
+             */
+            $this->assertTrue(env('APP_JALANKAN_SEED_DEMO'), 'env() mengubah "true" menjadi boolean.');
+            $this->assertSame('SandiUjiProduksi2026', env('SEED_DEMO_PASSWORD'), 'env() tidak melihat kata sandi.');
+
             $this->artisan('db:seed', ['--class' => DemoPeranSeeder::class, '--force' => true])
                 ->assertSuccessful();
         } finally {
-            putenv('APP_JALANKAN_SEED_DEMO');
-            putenv('SEED_DEMO_PASSWORD');
+            $this->pulihkanEnv($asli);
         }
 
         $user = User::query()->where('email', 'sekretaris@raab.test')->firstOrFail();
@@ -213,15 +274,16 @@ class DemoPeranSeederTest extends TestCase
     {
         app()->detectEnvironment(fn () => 'production');
 
-        putenv('APP_JALANKAN_SEED_DEMO=true');
-        putenv('SEED_DEMO_PASSWORD=');
+        $asli = $this->setelEnv([
+            'APP_JALANKAN_SEED_DEMO' => 'true',
+            'SEED_DEMO_PASSWORD' => '',
+        ]);
 
         try {
             $this->artisan('db:seed', ['--class' => DemoPeranSeeder::class, '--force' => true])
                 ->assertSuccessful();
         } finally {
-            putenv('APP_JALANKAN_SEED_DEMO');
-            putenv('SEED_DEMO_PASSWORD');
+            $this->pulihkanEnv($asli);
         }
 
         // Lebih baik tidak ada akun demo daripada akun demo yang kata sandinya

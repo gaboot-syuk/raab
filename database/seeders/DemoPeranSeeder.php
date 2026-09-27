@@ -123,7 +123,18 @@ class DemoPeranSeeder extends Seeder
             return true;
         }
 
-        if (env(self::SAKLAR) === 'true') {
+        /*
+         * filter_var(), BUKAN `=== 'true'`.
+         *
+         * env() tidak mengembalikan nilai apa adanya: 'true' dan 'false'
+         * diubahnya menjadi boolean sungguhan. Jadi perbandingan
+         * `env(SAKLAR) === 'true'` SELALU salah — sakelarnya tidak akan pernah
+         * terbaca meski sudah diisi dengan benar, di produksi maupun di
+         * pengujian, dan seeder diam-diam menolak berjalan.
+         *
+         * filter_var() menerima keduanya: boolean true dan string 'true'.
+         */
+        if (filter_var(env(self::SAKLAR), FILTER_VALIDATE_BOOL)) {
             return true;
         }
 

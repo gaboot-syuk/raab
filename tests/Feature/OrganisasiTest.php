@@ -228,14 +228,30 @@ class OrganisasiTest extends TestCase
     public function test_migrasi_pengisi_slug_tidak_menabrak_slug_yang_sudah_dipakai(): void
     {
         $adaSlug = $this->lso('LSO Kembar');
-        $belum = $this->lso('LSO Kembar Lain');
+
+        /*
+         * Dibuat LANGSUNG, tanpa memakai pembantu `lso()`.
+         *
+         * Pembantu itu mengisi kolom slug sendiri, sehingga pengait model —
+         * satu-satunya tempat bentrokan slug diselesaikan — tidak pernah ikut
+         * bermain. Yang diuji di sini justru pengait itu.
+         *
+         * Namanya juga harus BERBEDA dari 'LSO Kembar': pasangan (jenis, nama)
+         * dijaga indeks unik. Yang dibutuhkan bukan nama yang sama, melainkan
+         * nama yang menghasilkan slug yang sama — "LSO-Kembar" -> lso-kembar.
+         */
+        $belum = new OrganisationUnit;
+        $belum->jenis = OrganisationUnit::JENIS_LSO;
+        $belum->nama = 'LSO-Kembar';
+        $belum->aktif = true;
+        $belum->save();
 
         $this->assertSame('lso-kembar', $adaSlug->slug);
+        $this->assertSame('lso-kembar-2', $belum->slug);
 
-        // Nama yang sama dengan yang sudah berslug, tetapi barisnya dikosongkan.
         \Illuminate\Support\Facades\DB::table('organisation_units')
             ->where('id', $belum->id)
-            ->update(['nama' => 'LSO Kembar', 'slug' => null]);
+            ->update(['slug' => null]);
 
         $migrasi = require database_path('migrations/2026_09_27_220000_backfill_unit_slugs.php');
         $migrasi->up();
