@@ -10,7 +10,9 @@ use Database\Seeders\PageSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\SettingSeeder;
 use Database\Seeders\SocialLinkSeeder;
+use Database\Seeders\SuperadminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
@@ -34,6 +36,45 @@ class KeamananTest extends TestCase
         'TELEPON' => '081999888777',
         'EMAIL' => 'kader.rahasia@contoh.test',
     ];
+
+    /* ============= Seeder data awal (dipakai saat deploy) ============= */
+
+    /**
+     * Seeder superadmin TIDAK boleh menimpa kata sandi yang sudah ada.
+     *
+     * Seeder ini ikut berjalan pada penyebaran berikutnya. Kalau ia menimpa,
+     * sandi yang sudah diganti pengurus akan kembali ke nilai di .env tanpa
+     * pemberitahuan — dan nilai itu tertulis di tempat yang mungkin terbaca
+     * orang lain. Bukan sekadar mengganggu: itu penurunan keamanan yang
+     * terjadi diam-diam pada setiap deploy.
+     */
+    public function test_seeder_superadmin_tidak_menimpa_kata_sandi_yang_sudah_ada(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $user = User::factory()->create([
+            'email' => 'ketua@raab.test',
+            'password' => Hash::make('SandiPilihanSendiri2026'),
+        ]);
+
+        $this->seed(SuperadminSeeder::class);
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('SandiPilihanSendiri2026', $user->password));
+        $this->assertFalse(Hash::check('rahasia123', $user->password));
+    }
+
+    public function test_seeder_superadmin_membuat_akun_saat_belum_ada(): void
+    {
+        $this->seed([RolePermissionSeeder::class, SuperadminSeeder::class]);
+
+        $user = User::query()->where('email', 'ketua@raab.test')->firstOrFail();
+
+        $this->assertTrue($user->hasRole('superadmin'));
+        $this->assertTrue(Hash::check('rahasia123', $user->password));
+        $this->assertNotNull($user->email_verified_at);
+    }
 
     protected function setUp(): void
     {

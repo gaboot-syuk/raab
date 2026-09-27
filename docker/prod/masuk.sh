@@ -6,9 +6,10 @@
 #
 #   1. Pastikan port sudah diketahui, lalu tulis konfigurasi nginx.
 #   2. Jalankan migrasi basis data.
-#   3. Siapkan cache konfigurasi, rute, dan tampilan.
-#   4. Sediakan tautan penyimpanan publik.
-#   5. Baru jalankan nginx, php-fpm, dan antrean.
+#   3. Isi data awal — HANYA bila diminta lewat APP_JALANKAN_SEED.
+#   4. Siapkan cache konfigurasi, rute, dan tampilan.
+#   5. Sediakan tautan penyimpanan publik.
+#   6. Baru jalankan nginx, php-fpm, dan antrean.
 #
 # Poin 2–4 dijalankan DI SINI, bukan saat membangun citra, karena basis data
 # dan variabel lingkungan baru tersedia saat wadahnya dinyalakan. Migrasi yang
@@ -44,6 +45,21 @@ fi
 if [ "$APP_JALANKAN_MIGRASI" != "false" ]; then
     echo "[masuk] Menjalankan migrasi…"
     php /var/www/html/artisan migrate --force || true
+fi
+
+# Data awal: peran & izin, akun superadmin, pengaturan situs, halaman statis.
+#
+# HANYA berjalan bila diminta lewat APP_JALANKAN_SEED=true, dan itu hanya perlu
+# pada penyebaran PERTAMA ke basis data yang masih kosong. Tanpa langkah ini,
+# tabelnya terbentuk tetapi kosong: tidak ada peran, tidak ada akun untuk masuk,
+# dan halaman seperti /sejarah menjawab 404.
+#
+# Sengaja tidak dijalankan otomatis setiap kali wadah menyala: seeder ini
+# menulis ulang pengaturan dan halaman, dan menjalankannya terus-menerus
+# membuang waktu penyalaan pada setiap bangun dari tidur.
+if [ "$APP_JALANKAN_SEED" = "true" ]; then
+    echo "[masuk] Mengisi data awal…"
+    php /var/www/html/artisan db:seed --force || true
 fi
 
 echo "[masuk] Menyiapkan cache…"
