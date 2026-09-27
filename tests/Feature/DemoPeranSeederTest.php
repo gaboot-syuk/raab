@@ -158,10 +158,15 @@ class DemoPeranSeederTest extends TestCase
     }
 
     /**
-     * Seeder ini menimpa kata sandi akun. Kalau ia pernah berjalan di server
-     * sungguhan, seluruh pengurus bisa terkunci dari akunnya sendiri.
+     * Seeder ini pernah MENIMPA kata sandi akun yang sudah ada. Kalau ia
+     * berjalan diam-diam di server sungguhan, seluruh pengurus bisa terkunci
+     * dari akunnya sendiri — dan kata sandinya kembali ke nilai yang tertulis
+     * di repositori.
+     *
+     * Penimpaan itu sekarang dihapus. Yang tersisa adalah penjaganya: tanpa
+     * sakelar APP_JALANKAN_SEED_DEMO=true, produksi tidak dijamah sama sekali.
      */
-    public function test_seeder_menolak_berjalan_di_produksi(): void
+    public function test_seeder_menolak_berjalan_di_produksi_tanpa_sakelar(): void
     {
         app()->detectEnvironment(fn () => 'production');
 
@@ -173,8 +178,99 @@ class DemoPeranSeederTest extends TestCase
         $this->artisan('db:seed', ['--class' => DemoPeranSeeder::class, '--force' => true])
             ->assertSuccessful();
 
-        $this->assertSame($sebelum, User::query()->count(), 'Seeder demo berjalan di produksi.');
+        $this->assertSame($sebelum, User::query()->count(), 'Seeder demo berjalan di produksi tanpa diminta.');
         $this->assertSame(0, User::query()->where('email', 'sekretaris@raab.test')->count());
+    }
+
+    public function test_seeder_berjalan_di_produksi_bila_sakelarnya_dinyalakan(): void
+    {
+        app()->detectEnvironment(fn () => 'production');
+
+        putenv('APP_JALANKAN_SEED_DEMO=true');
+        putenv('SEED_DEMO_PASSWORD=SandiUjiProduksi2026');
+
+        try {
+            $this->artisan('db:seed', ['--class' => DemoPeranSeeder::class, '--force' => true])
+                ->assertSuccessful();
+        } finally {
+            putenv('APP_JALANKAN_SEED_DEMO');
+            putenv('SEED_DEMO_PASSWORD');
+        }
+
+        $user = User::query()->where('email', 'sekretaris@raab.test')->firstOrFail();
+
+        /*
+         * Kata sandinya HARUS dari SEED_DEMO_PASSWORD, bukan nilai bawaan di
+         * kode. Nilai bawaan itu tertulis di repositori — memakainya di server
+         * sungguhan sama dengan mengumumkan kata sandi sekretaris dan
+         * bendahara kepada siapa pun yang bisa membaca repositori.
+         */
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('SandiUjiProduksi2026', $user->password));
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check(DemoPeranSeeder::KATA_SANDI, $user->password));
+    }
+
+    public function test_seeder_menolak_produksi_bila_kata_sandinya_kosong(): void
+    {
+        app()->detectEnvironment(fn () => 'production');
+
+        putenv('APP_JALANKAN_SEED_DEMO=true');
+        putenv('SEED_DEMO_PASSWORD=');
+
+        try {
+            $this->artisan('db:seed', ['--class' => DemoPeranSeeder::class, '--force' => true])
+                ->assertSuccessful();
+        } finally {
+            putenv('APP_JALANKAN_SEED_DEMO');
+            putenv('SEED_DEMO_PASSWORD');
+        }
+
+        // Lebih baik tidak ada akun demo daripada akun demo yang kata sandinya
+        // tertulis di repositori.
+        $this->assertSame(0, User::query()->where('email', 'sekretaris@raab.test')->count());
+    }
+
+    public function test_seeder_tidak_menimpa_kata_sandi_akun_yang_sudah_ada(): void
+    {
+        $pengurus = User::factory()->create([
+            'email' => 'sekretaris@raab.test',
+            'password' => \Illuminate\Support\Facades\Hash::make('SandiAsliPengurus2026'),
+            'email_verified_at' => now(),
+        ]);
+
+        $this->jalankanSeedDemo();
+
+        $pengurus->refresh();
+
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Hash::check('SandiAsliPengurus2026', $pengurus->password),
+            'Kata sandi pengurus ditimpa oleh seeder demo.'
+        );
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check(DemoPeranSeeder::KATA_SANDI, $pengurus->password));
+        $this->assertTrue($pengurus->hasRole('sekretaris'), 'Perannya tetap harus terpasang.');
+    }
+
+    public function test_seeder_membuat_anggota_demo_sendiri_saat_basis_data_kosong(): void
+    {
+        /*
+         * Sengaja TIDAK memanggil buatAnggota(): inilah keadaan basis data
+         * produksi yang baru — belum ada satu pun anggota.
+         *
+         * Versi sebelumnya meminjam anggota yang sudah ada, sehingga akun
+         * kader@ dan alumni@ tidak pernah terbuat di sana. Lebih buruk lagi,
+         * bila ada anggota sungguhan, akun ORANG ITU yang diambil alih.
+         */
+        $this->jalankanSeedDemo();
+
+        foreach (['kader@raab.test' => Member::STATUS_AKTIF, 'alumni@raab.test' => Member::STATUS_ALUMNI] as $email => $status) {
+            $user = User::query()->where('email', $email)->firstOrFail();
+
+            $this->assertNotNull($user->member, "Akun {$email} tidak punya data anggota.");
+            $this->assertSame($status, $user->member->status);
+        }
+
+        $alumni = User::query()->where('email', 'alumni@raab.test')->firstOrFail()->member;
+
+        $this->assertNotNull($alumni->profilAlumni, 'Alumni demo perlu profil agar direktori alumni tidak kosong.');
     }
 
     public function test_seeder_aman_dijalankan_dua_kali(): void

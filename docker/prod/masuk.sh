@@ -6,7 +6,8 @@
 #
 #   1. Pastikan port sudah diketahui, lalu tulis konfigurasi nginx.
 #   2. Jalankan migrasi basis data.
-#   3. Isi data awal — HANYA bila diminta lewat APP_JALANKAN_SEED.
+#   3. Isi data awal — HANYA bila diminta lewat APP_JALANKAN_SEED. Akun demo
+#      per peran menyusul, dengan sakelar TERPISAH (APP_JALANKAN_SEED_DEMO).
 #   4. Siapkan cache konfigurasi dan tampilan — TIDAK rute. Lihat alasannya
 #      pada bagian cache di bawah.
 #   5. Sediakan tautan penyimpanan publik.
@@ -83,6 +84,28 @@ if [ "$APP_JALANKAN_SEED" = "true" ]; then
         echo "[masuk] untuk masuk, dan halaman seperti /sejarah menjawab 404."
         echo "[masuk] Periksa pesan galat di atas, lalu jalankan ulang dengan"
         echo "[masuk] APP_JALANKAN_SEED=true."
+        echo "[masuk] ============================================================"
+    fi
+fi
+
+# Akun demo per peran — SAKELAR TERPISAH, dan pemisahan itu disengaja.
+#
+# Seeder ini membuat akun sekretaris, bendahara, konten, kader, dan alumni
+# dengan SATU kata sandi bersama dari SEED_DEMO_PASSWORD, supaya setiap peran
+# dapat dicoba pada masa uji coba MVP. Ia tidak ikut ke dalam `db:seed` biasa
+# karena data demo bukan bagian dari kerangka situs: membuangnya kelak tidak
+# boleh berarti ikut membuang peran, pengaturan, dan halaman.
+#
+# Seeder itu masih menjaga dirinya sendiri: tanpa APP_JALANKAN_SEED_DEMO=true
+# ia menolak berjalan meski dipanggil dari sini.
+if [ "$APP_JALANKAN_SEED_DEMO" = "true" ]; then
+    echo "[masuk] Mengisi akun demo per peran…"
+
+    if ! php /var/www/html/artisan db:seed --class=DemoPeranSeeder --force; then
+        echo "[masuk] ============================================================"
+        echo "[masuk] PERINGATAN: PENGISIAN AKUN DEMO GAGAL."
+        echo "[masuk] Pastikan SEED_DEMO_PASSWORD sudah diisi — di produksi seeder"
+        echo "[masuk] menolak memakai kata sandi bawaan yang tertulis di kode."
         echo "[masuk] ============================================================"
     fi
 fi
