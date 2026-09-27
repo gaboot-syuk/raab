@@ -52,6 +52,18 @@ Thumbs.db
 
 # Berkas catatan sementara dari sesi pengerjaan.
 /f7-hasil.txt
-AGENTS.md
-CLAUDE.md
-docs/
+
+# ---------------------------------------------------------------------------
+# Berkas kerja asisten AI & catatan perencanaan
+# ---------------------------------------------------------------------------
+# `AGENTS.md` dan `CLAUDE.md` memuat panduan kerja untuk asisten AI — konteks
+# pengerjaan, bukan bagian dari aplikasi. `docs/` memuat catatan perencanaan,
+# asumsi, dan panduan internal yang tidak perlu ikut ke repositori.
+#
+# Ditulis dengan awalan `/` supaya hanya berkas di AKAR proyek yang
+# terpengaruh. Tanpa awalan, pola `docs/` juga akan mengabaikan setiap folder
+# bernama `docs` di kedalaman mana pun — termasuk di dalam paket pihak ketiga
+# yang mungkin perlu ikut.
+/AGENTS.md
+/CLAUDE.md
+/docs/
