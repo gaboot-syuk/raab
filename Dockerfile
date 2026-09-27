@@ -51,12 +51,22 @@ COPY composer.json composer.lock ./
 
 # --no-scripts karena skrip artisan membutuhkan berkas yang belum ada di tahap
 # ini. Skripnya dijalankan di tahap terakhir, saat seluruh berkas sudah ada.
+#
+# --ignore-platform-req=ext-exif: citra `composer:2` tidak membawa exif,
+# sedangkan spatie/laravel-medialibrary menuntutnya sehingga pemeriksaan
+# platform menggagalkan build. Pemeriksaan itu berlaku pada citra PEMBANGUN
+# ini, bukan pada citra yang dikirim — dan citra akhirnya memang memasang exif
+# (lihat daftar docker-php-ext-install di tahap 3). Karena itu yang dikecualikan
+# hanya SATU ekstensi ini, bukan seluruh pemeriksaan platform: memakai
+# --ignore-platform-reqs akan ikut menyembunyikan ekstensi lain yang benar-benar
+# kurang, dan itu justru kesalahan yang sedang kita hindari.
 RUN composer install \
         --no-dev \
         --no-interaction \
         --no-progress \
         --prefer-dist \
         --no-scripts \
+        --ignore-platform-req=ext-exif \
         --optimize-autoloader
 
 # ------------------------------------------------------------
@@ -70,10 +80,26 @@ FROM php:8.4-fpm-alpine
 #   curl         — pemeriksaan kesehatan
 #   sqlite       — basis data bawaan, dan dipakai lingkungan pengujian
 #   libpng/libjpeg/freetype — pendukung ekstensi gd
+#
+# Pustaka RUNTIME sengaja dipasang terpisah dari paket -dev.
+#
+# `apk del libpng-dev` tidak sekadar menghapus berkas header: ia juga membuang
+# `libpng` yang tadi ikut terpasang sebagai kebergantungannya. Kalau pustaka
+# runtime tidak diminta secara eksplisit, gd/intl/zip berhasil DIKOMPILASI
+# tetapi gagal DIMUAT saat wadahnya berjalan — dan galatnya baru terlihat di
+# log sebagai "Unable to load dynamic library". Dengan memintanya eksplisit,
+# ia menjadi paket yang diminta langsung, sehingga `apk del` di bawah tidak
+# menyentuhnya.
 RUN apk add --no-cache \
         nginx \
         supervisor \
         curl \
+        libpng \
+        libjpeg-turbo \
+        freetype \
+        libzip \
+        icu-libs \
+        oniguruma \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
@@ -86,12 +112,29 @@ RUN apk add --no-cache \
         pdo_mysql \
         pdo_sqlite \
         bcmath \
+        exif \
         gd \
         intl \
         zip \
         opcache \
     && apk del libpng-dev libjpeg-turbo-dev freetype-dev oniguruma-dev libzip-dev icu-dev \
     && rm -rf /var/cache/apk/*
+
+# Membuktikan citra AKHIR benar-benar MEMUAT setiap ekstensi yang dipasang.
+#
+# Memasang ekstensi dan memuatnya adalah dua hal berbeda: kalau pustaka
+# runtime-nya ikut terbuang, kompilasinya berhasil tetapi modulnya gagal
+# dimuat — dan itu tidak terlihat sampai ada halaman yang memakainya.
+#
+# Spatie medialibrary menuntut ext-exif, dan citra ini sempat tertinggal
+# darinya; baru ketahuan ketika penyebaran ke hosting gagal. Tahap Composer
+# sengaja mengecualikan pemeriksaan itu, jadi di sinilah pemeriksaannya
+# ditegakkan — pada citra yang benar-benar dijalankan.
+RUN set -e; \
+    for ext in pdo_mysql pdo_sqlite bcmath exif gd intl zip opcache; do \
+        php -m | grep -qi "$ext" || { echo "GAGAL: ekstensi $ext tidak termuat"; exit 1; }; \
+    done; \
+    echo "Seluruh ekstensi termuat."
 
 # Pekerja antrean dijalankan sebagai proses terpisah di dalam wadah ini, dan
 # `queue:work` adalah proses panjang — batas waktunya harus dimatikan, kalau
