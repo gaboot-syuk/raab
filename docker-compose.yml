@@ -1,0 +1,133 @@
+# ============================================================
+# PMII Rayon Ali Ahmad Baktsir — Lingkungan Pengembangan
+#
+#   docker compose up -d          jalankan semua layanan
+#   docker compose exec app bash  masuk ke container aplikasi
+#   docker compose logs -f app    lihat log
+#   docker compose down           hentikan (data DB tetap aman)
+#
+# Server web : http://localhost:8100
+# Database   : localhost:3309  (raab / rahasia — khusus lokal)
+# Surat (UI) : http://localhost:8025   (Mailpit — penampung email)
+# SMTP       : localhost:1025
+#
+# Catatan port:
+#   8100 dipakai (bukan 8000) karena port 8000 sempat tertinggal/tidak
+#        dapat dijangkau oleh preview editor pada mesin pengembangan ini.
+#   3309 dipakai karena 3308 sudah dipakai proyek yukpesan.
+# ============================================================
+name: raab
+
+services:
+  # --- Aplikasi Laravel ---
+  app:
+    build:
+      context: .
+      dockerfile: docker/dev/Dockerfile
+      args:
+        UID: ${APP_UID:-1000}
+        GID: ${APP_GID:-1000}
+    image: raab-app:local
+    container_name: raab-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    # Dijalankan sebagai pengguna yang UID/GID-nya sama dengan pengguna host,
+    # supaya berkas hasil container (cache, log, media) tetap dapat ditulis
+    # dari sisi host. TANPA ini, berkas bisa dimiliki root dan memicu galat
+    # "laravel.log could not be opened in append mode: Permission denied".
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "8100:8000"
+    environment:
+      # Server bawaan PHP dijalankan multi-proses (wajib disertai --no-reload)
+      PHP_CLI_SERVER_WORKERS: "4"
+      # CATATAN 1: Dotenv milik Laravel TIDAK menimpa variabel lingkungan yang
+      # sudah ada — jadi nama host basis data cukup diatur di berkas .env
+      # (mis. DB_HOST=db), tidak perlu diulang di sini.
+      # CATATAN 2: JANGAN menetapkan APP_ENV di sini. Bila wadah sudah membawa
+      # APP_ENV=local, PHPUnit tidak dapat menimpanya menjadi "testing"
+      # (lihat phpunit.xml), sehingga pengujian gagal dengan kode 419.
+    command: php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - raab
+
+  # --- Pemroses antrean (email verifikasi, terjemahan, dll.) ---
+  queue:
+    image: raab-app:local
+    container_name: raab-queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    volumes:
+      - ./:/var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    depends_on:
+      - app
+    networks:
+      - raab
+
+  # --- Penjadwal (menggantikan cron di produksi) ---
+  scheduler:
+    image: raab-app:local
+    container_name: raab-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    volumes:
+      - ./:/var/www/html
+    command: php artisan schedule:work
+    depends_on:
+      - app
+    networks:
+      - raab
+
+  # --- Basis data (sama seperti produksi: MySQL/MariaDB) ---
+  db:
+    image: mariadb:11
+    container_name: raab-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: raab
+      MARIADB_USER: raab
+      MARIADB_PASSWORD: rahasia
+      MARIADB_ROOT_PASSWORD: rootrahasia
+    ports:
+      - "3309:3306"
+    volumes:
+      - raab-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - raab
+
+  # --- Penampung email (uji kirim email tanpa mengirim ke alamat asli) ---
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: raab-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 500
+    volumes:
+      - raab-mail:/data
+    networks:
+      - raab
+
+volumes:
+  raab-db:
+  raab-mail:
+
+networks:
+  raab:
+    driver: bridge

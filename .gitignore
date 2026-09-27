@@ -1,0 +1,54 @@
+*.log
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Rahasia & konfigurasi lingkungan
+# ---------------------------------------------------------------------------
+# SEMUA berkas `.env` diabaikan, bukan hanya tiga nama yang disebut satu per
+# satu. Daftar nama yang ditulis manual cepat ketinggalan: begitu ada
+# `.env.staging` atau `.env.production.local`, berkas itu lolos tanpa ada yang
+# menyadarinya — dan sebuah .env memuat kunci aplikasi, kata sandi basis data,
+# serta kredensial SMTP.
+#
+# Yang DIKECUALIKAN hanyalah berkas contoh, yang memang untuk dibagikan dan
+# tidak memuat rahasia sungguhan.
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.testing
+
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Sisa berkas lokal yang BUKAN bagian aplikasi
+# ---------------------------------------------------------------------------
+# `logo-pmii-raab.png` di akar adalah salinan yang isinya sama persis dengan
+# `public/brand/logo-pmii-raab.png` (dokumen menyebut berkasnya sudah
+# dipindahkan). Aplikasi memakai yang di `public/brand/`, jadi yang di akar
+# hanya menggandakan 90 KB tanpa dipakai siapa pun.
+/logo-pmii-raab.png
+
+# Berkas catatan sementara dari sesi pengerjaan.
+/f7-hasil.txt

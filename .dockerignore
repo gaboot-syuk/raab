@@ -1,0 +1,14 @@
+# Konteks build sengaja dibuat kecil: berkas proyek di-*bind mount* saat
+# menjalankan container, bukan disalin ke dalam image.
+vendor
+node_modules
+storage
+bootstrap/cache
+public/build
+public/hot
+docs
+.git
+.github
+*.md
+.env
+.phpunit.result.cache

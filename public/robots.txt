@@ -1,0 +1,59 @@
+# robots.txt — PMII Rayon Ali Ahmad Baktsir
+#
+# Yang DILARANG di sini bukan halaman rahasia — halaman-halaman itu memang
+# tidak bisa dibuka tanpa masuk. Yang dilarang adalah halaman yang tidak ada
+# gunanya diindeks: hasil pencarian, formulir, dan alamat bertoken. Membiarkan
+# perayap menelusurinya hanya memenuhi laporan mesin pencari dengan ratusan
+# baris "dilarang", dan tumpukan itu menyembunyikan masalah yang sungguhan.
+
+User-agent: *
+
+# Panel pengurus & area anggota — semuanya butuh masuk.
+Disallow: /panel
+Disallow: /dasbor
+Disallow: /profil
+Disallow: /notifikasi
+Disallow: /kartu-kader
+Disallow: /arsip-internal
+Disallow: /pengumuman-internal
+Disallow: /prestasi-saya
+Disallow: /pustaka
+Disallow: /iuran
+Disallow: /hibah
+Disallow: /karya
+Disallow: /kontribusi
+Disallow: /kegiatan
+Disallow: /presensi
+
+# Alamat bertoken & hasil tindakan: isinya milik satu orang, dan menautkannya
+# ke indeks berarti membocorkan tautannya.
+Disallow: /verifikasi-kader/
+Disallow: /aspirasi/lacak
+Disallow: /pendaftaran/status
+Disallow: /pendaftaran/sukses/
+Disallow: /pendaftaran/kartu
+
+# Pintu masuk akun.
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Unduhan berkas — bukan halaman, dan sebagian isinya terbatas.
+Disallow: /arsip/
+Disallow: /storage/
+
+# Titik masuk bawaan kerangka kerja.
+Disallow: /up
+Disallow: /_ignition
+
+# Pemicu penjadwal: bukan halaman, dan alamatnya memuat token.
+Disallow: /internal/
+
+# Perayap yang isinya hanya membebani server tanpa mendatangkan pengunjung.
+User-agent: SemrushBot
+Disallow: /
+User-agent: AhrefsBot
+Disallow: /
+
+Sitemap: /sitemap.xml

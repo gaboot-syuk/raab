@@ -1,0 +1,79 @@
+# ============================================================
+# nginx — konfigurasi produksi
+#
+# Dijalankan di dalam wadah yang sama dengan php-fpm. Karena itu permintaan
+# PHP diteruskan ke 127.0.0.1, bukan ke nama layanan lain.
+#
+# Port TIDAK ditulis di sini. Hosting gratis menentukan portnya lewat variabel
+# lingkungan $PORT, dan berkas ini memakainya. Alamat yang ditulis tetap akan
+# ditolak: wadahnya berjalan, tetapi tidak ada yang bisa menjangkaunya.
+# ============================================================
+
+worker_processes auto;
+pid /run/nginx.pid;
+error_log /dev/stderr warn;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Log ke keluaran standar supaya terbaca oleh log hosting.
+    access_log /dev/stdout;
+
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+
+    # Unggahan poster kegiatan dan berkas arsip bisa cukup besar.
+    client_max_body_size 25M;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json
+               image/svg+xml application/xml;
+
+    server {
+        listen ${PORT};
+        server_name _;
+
+        root /var/www/html/public;
+        index index.php;
+
+        charset utf-8;
+
+        # Aset yang dibangun Vite diberi nama berisi cuplikan isi berkas, jadi
+        # isinya tidak akan berubah selama namanya sama. Karena itu aman
+        # disimpan lama di peramban — dan itu yang membuat kunjungan berikutnya
+        # terasa jauh lebih cepat.
+        location /build/ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $document_root;
+            include fastcgi_params;
+
+            fastcgi_read_timeout 120;
+            fastcgi_buffers 16 16k;
+            fastcgi_buffer_size 32k;
+        }
+
+        # Berkas tersembunyi (mis. .env) tidak boleh pernah bisa diunduh.
+        location ~ /\. {
+            deny all;
+            return 404;
+        }
+    }
+}
