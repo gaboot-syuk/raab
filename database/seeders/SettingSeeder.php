@@ -26,8 +26,15 @@ class SettingSeeder extends Seeder
             ['identitas', 'nama_cabang', 'Cabang Sukoharjo', 'Sukoharjo Branch', 'teks', 'Nama cabang'],
             ['identitas', 'nama_kampus', 'UIN Raden Mas Said Surakarta', 'UIN Raden Mas Said Surakarta', 'teks', 'Nama kampus'],
 
-            // --- Sekretariat (placeholder) ---
-            ['sekretariat', 'alamat', 'Alamat sekretariat belum diisi', 'Secretariat address is not yet filled in', 'area', 'Alamat sekretariat'],
+            // --- Sekretariat ---
+            [
+                'sekretariat',
+                'alamat',
+                'Sekretariat PMII Rayon Ali Ahmad Baktsir, Jalan Gowongan, RT.3/RW.2, Pucangan, Kartasura, Sukoharjo, Jawa Tengah, Indonesia 57168',
+                'PMII Rayon Ali Ahmad Baktsir Secretariat, Jalan Gowongan, RT.3/RW.2, Pucangan, Kartasura, Sukoharjo, Central Java, Indonesia 57168',
+                'area',
+                'Alamat sekretariat',
+            ],
             ['sekretariat', 'jam_operasional', 'Senin–Jumat, 09.00–16.00 WIB', 'Monday–Friday, 09:00–16:00 (GMT+7)', 'teks', 'Jam operasional'],
             ['sekretariat', 'peta_embed', '', '', 'area', 'Kode sematan Google Maps'],
             ['sekretariat', 'email', 'sekretariat@raab.test', 'sekretariat@raab.test', 'teks', 'Email resmi'],

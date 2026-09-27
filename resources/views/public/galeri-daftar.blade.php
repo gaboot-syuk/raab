@@ -7,7 +7,7 @@
     <x-public.judul-halaman
         :judul="__('organisasi.galeri.judul')"
         :deskripsi="__('organisasi.galeri.intro')"
-        :remah="[__('umum.menu.organisasi'), __('organisasi.galeri.judul')]"
+        :remah="[__('umum.menu.publikasi'), __('organisasi.galeri.judul')]"
     />
 
     <div class="mx-auto max-w-6xl px-4 py-10 lg:px-6">

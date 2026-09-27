@@ -15,7 +15,7 @@
         <form method="GET" class="brutal grid gap-3 bg-paper p-4 sm:grid-cols-3 lg:grid-cols-6">
             <div>
                 <label for="cari" class="block text-xs font-bold uppercase text-muted">{{ __('umum.direktori.cari') }}</label>
-                <input id="cari" name="cari" type="search" value="{{ $saring['cari'] }}" placeholder="{{ __('organisasi.direktori.slug_pencarian') }}" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
+                <input id="cari" name="cari" type="search" value="{{ $saring['cari'] }}" placeholder="{{ __('umum.direktori.cari_prodi_fakultas') }}" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
             </div>
 
             <div>
@@ -69,7 +69,7 @@
         </form>
 
         <p class="mt-4 text-sm text-muted">
-            {{ __('umum.direktori.ditemukan') }}: <span class="font-bold text-ink">{{ $daftar->total() }}</span>
+            {{ __('umum.direktori.ditemukan') }}: <span class="font-bold text-ink">{{ $statistik['total']['tampil'] }}</span>
         </p>
 
         @if ($daftar->isEmpty())
@@ -79,17 +79,16 @@
         @else
             <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($daftar as $anggota)
+                    {{--
+                        Kartu ini SENGAJA tidak memuat nama, foto, tautan media
+                        sosial, maupun tautan ke profil kader. Tautan profil
+                        pun berbahaya karena alamatnya memuat slug dari nama
+                        orang. Yang tersisa hanya atribut akademis dan
+                        organisatoris.
+                    --}}
                     <li class="brutal bg-paper p-5">
-                        <h2 class="font-display text-lg leading-tight">
-                            @if (! empty($anggota['slug']))
-                                <a href="{{ route('public.prestasi.kader', $anggota['slug']) }}" class="hover:underline">{{ $anggota['nama'] }}</a>
-                            @else
-                                {{ $anggota['nama'] }}
-                            @endif
-                        </h2>
-
-                        <p class="mt-1 text-sm text-muted">
-                            {{ collect([$anggota['program_studi'], $anggota['fakultas']])->filter()->join(' · ') ?: __('umum.direktori.prodi_kosong') }}
+                        <p class="font-display text-lg leading-tight">
+                            {{ $anggota['program_studi'] ?: __('umum.direktori.prodi_kosong') }}
                         </p>
 
                         <div class="mt-3 flex flex-wrap gap-1">
@@ -102,29 +101,56 @@
                                 <span class="border-2 border-ink bg-paper-alt px-1.5 py-0.5 text-[11px] font-bold">{{ $anggota['unit'] }}</span>
                             @endif
                         </div>
-
-                        @if (! empty($anggota['keahlian']))
-                            <p class="mt-3 text-xs text-muted">
-                                <span class="font-bold uppercase">{{ __('umum.direktori.keahlian') }}:</span>
-                                {{ implode(', ', $anggota['keahlian']) }}
-                            </p>
-                        @endif
-
-                        @if (! empty($anggota['sosmed']))
-                            <p class="mt-2 flex flex-wrap gap-2 text-xs">
-                                @foreach ($anggota['sosmed'] as $platform => $tautan)
-                                    @if (filled($tautan))
-                                        <a href="{{ $tautan }}" target="_blank" rel="noopener noreferrer" class="font-bold underline">{{ $platform }}</a>
-                                    @endif
-                                @endforeach
-                            </p>
-                        @endif
                     </li>
                 @endforeach
             </ul>
 
             <div class="mt-8">{{ $daftar->links() }}</div>
         @endif
+
+        {{--
+            Statistik agregat.
+
+            Diletakkan SETELAH daftar, bukan sebelum, supaya pengunjung yang
+            datang untuk mengisi saringan tidak perlu melewati tiga blok angka
+            sebelum melihat hasilnya.
+        --}}
+        <section class="mt-10 border-t-2 border-ink pt-8">
+            <h2 class="font-display text-xl">{{ __('umum.direktori.statistik') }}</h2>
+            <p class="mt-1 text-sm text-muted">{{ __('umum.direktori.statistik_intro') }}</p>
+
+            <div class="brutal mt-4 bg-paper p-5">
+                <p class="text-xs font-bold uppercase tracking-wide text-muted">{{ __('umum.direktori.jumlah_kader') }}</p>
+                <p class="font-display text-3xl leading-none">{{ $statistik['total']['tampil'] }}</p>
+            </div>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-3">
+                @foreach ([
+                    ['judul' => __('umum.direktori.per_angkatan'), 'rincian' => $statistik['angkatan']],
+                    ['judul' => __('umum.direktori.per_unit'), 'rincian' => $statistik['unit']],
+                    ['judul' => __('umum.direktori.per_prodi'), 'rincian' => $statistik['prodi']],
+                ] as $blok)
+                    <div class="brutal bg-paper p-5">
+                        <h3 class="font-display text-base">{{ $blok['judul'] }}</h3>
+
+                        @if ($blok['rincian']->isEmpty())
+                            <p class="mt-2 text-sm text-muted">{{ __('umum.direktori.belum_ada_rincian') }}</p>
+                        @else
+                            <dl class="mt-3 space-y-1 text-sm">
+                                @foreach ($blok['rincian'] as $baris)
+                                    <div class="flex items-baseline justify-between gap-3 border-b border-ink/10 pb-1">
+                                        <dt class="truncate">{{ $baris['label'] }}</dt>
+                                        <dd class="font-bold">{{ $baris['tampil'] }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <p class="mt-3 text-xs text-muted">{{ __('umum.direktori.catatan_angka') }}</p>
+        </section>
 
         <p class="mt-8 border-t-2 border-ink pt-4 text-xs text-muted">
             {{ __('umum.direktori.catatan_privasi') }}

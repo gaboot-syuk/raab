@@ -7,7 +7,8 @@
 #   1. Pastikan port sudah diketahui, lalu tulis konfigurasi nginx.
 #   2. Jalankan migrasi basis data.
 #   3. Isi data awal — HANYA bila diminta lewat APP_JALANKAN_SEED.
-#   4. Siapkan cache konfigurasi, rute, dan tampilan.
+#   4. Siapkan cache konfigurasi dan tampilan — TIDAK rute. Lihat alasannya
+#      pada bagian cache di bawah.
 #   5. Sediakan tautan penyimpanan publik.
 #   6. Baru jalankan nginx, php-fpm, dan antrean.
 #
@@ -44,7 +45,18 @@ fi
 
 if [ "$APP_JALANKAN_MIGRASI" != "false" ]; then
     echo "[masuk] Menjalankan migrasi…"
-    php /var/www/html/artisan migrate --force || true
+
+    # Kegagalan TIDAK menghentikan wadah — halaman galat dan /up harus tetap
+    # bisa menjawab supaya masalahnya terlihat. Tetapi kegagalan itu juga tidak
+    # boleh LEWAT BEGITU SAJA: tanpa peringatan di bawah, yang tampak di log
+    # hanyalah baris "Menjalankan migrasi…" yang seolah berhasil.
+    if ! php /var/www/html/artisan migrate --force; then
+        echo "[masuk] ============================================================"
+        echo "[masuk] PERINGATAN: MIGRASI GAGAL."
+        echo "[masuk] Tabelnya belum terbentuk. Situs akan menyala tetapi hampir"
+        echo "[masuk] setiap halaman akan gagal. Periksa pesan galat di atas."
+        echo "[masuk] ============================================================"
+    fi
 fi
 
 # Data awal: peran & izin, akun superadmin, pengaturan situs, halaman statis.
@@ -59,13 +71,43 @@ fi
 # membuang waktu penyalaan pada setiap bangun dari tidur.
 if [ "$APP_JALANKAN_SEED" = "true" ]; then
     echo "[masuk] Mengisi data awal…"
-    php /var/www/html/artisan db:seed --force || true
+
+    # Sama seperti migrasi: gagal pun wadah tetap jalan, tetapi TIDAK boleh
+    # diam. Sebelum ini kegagalannya tertelan `|| true`, dan akibatnya baru
+    # terlihat belakangan sebagai halaman 404 dan ketidakmampuan masuk panel —
+    # tanpa satu pun petunjuk di log bahwa pengisiannya memang gagal.
+    if ! php /var/www/html/artisan db:seed --force; then
+        echo "[masuk] ============================================================"
+        echo "[masuk] PERINGATAN: PENGISIAN DATA AWAL GAGAL."
+        echo "[masuk] Tabel ada tetapi KOSONG: tidak ada peran, tidak ada akun"
+        echo "[masuk] untuk masuk, dan halaman seperti /sejarah menjawab 404."
+        echo "[masuk] Periksa pesan galat di atas, lalu jalankan ulang dengan"
+        echo "[masuk] APP_JALANKAN_SEED=true."
+        echo "[masuk] ============================================================"
+    fi
 fi
 
 echo "[masuk] Menyiapkan cache…"
 php /var/www/html/artisan config:cache || true
-php /var/www/html/artisan route:cache || true
 php /var/www/html/artisan view:cache || true
+
+# `route:cache` SENGAJA TIDAK dijalankan di sini.
+#
+# Paket mcamara/laravel-localization mendaftarkan alamat berprefiks bahasa
+# (/en) SAAT PERMINTAAN BERJALAN, bukan saat rute didefinisikan. Pencachean
+# rute membekukan koleksi rute sebelum penambahan itu terjadi, sehingga
+# SELURUH halaman versi Inggris menjawab 404.
+#
+# Terbukti dengan mengukurnya langsung: sebelum route:cache "/en" menjawab
+# 200, sesudahnya 404 — dan kembali 200 begitu cache-nya dibersihkan.
+#
+# Kegagalannya senyap dan hanya separuh: halaman Indonesia tetap normal,
+# sehingga yang tampak hanyalah "versi Inggris tidak ada". Lingkungan
+# pengembangan pun tidak pernah menjalankan route:cache, jadi tidak ada yang
+# menangkapnya sampai dipasang di hosting.
+#
+# Ongkosnya nyata tapi kecil: pendaftaran rute diulang tiap permintaan.
+# Itu jauh lebih murah daripada separuh situs yang mati.
 
 echo "[masuk] Menyiapkan penyimpanan publik…"
 php /var/www/html/artisan storage:link || true

@@ -191,33 +191,39 @@
     </section>
 
     {{-- ============ SAREKAT LSO ============ --}}
-    <section class="border-b-2 border-ink bg-paper-alt">
-        <div class="mx-auto max-w-7xl px-4 py-12 lg:px-6">
-            <div class="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h2 class="font-display text-2xl sm:text-3xl">{{ __('umum.beranda.lso_judul') }}</h2>
-                    <p class="mt-2 max-w-2xl text-ink/80">{{ __('umum.beranda.lso_teks') }}</p>
+    {{-- Disembunyikan bila belum ada LSO di basis data: lebih baik tidak
+         menampilkan apa pun daripada memamerkan unit yang tidak ada. --}}
+    @if ($lso->isNotEmpty())
+        <section class="border-b-2 border-ink bg-paper-alt">
+            <div class="mx-auto max-w-7xl px-4 py-12 lg:px-6">
+                <div class="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <h2 class="font-display text-2xl sm:text-3xl">{{ __('umum.beranda.lso_judul') }}</h2>
+                        <p class="mt-2 max-w-2xl text-ink/80">{{ __('umum.beranda.lso_teks') }}</p>
+                    </div>
+                    @if (Route::has('public.lso'))
+                        <a href="{{ route('public.lso') }}" class="brutal-sm brutal-hover bg-paper px-4 py-2 text-sm font-bold">
+                            {{ __('umum.tombol.lihat_semua') }}
+                        </a>
+                    @endif
                 </div>
-                @if (Route::has('public.lso'))
-                    <a href="{{ route('public.lso') }}" class="brutal-sm brutal-hover bg-paper px-4 py-2 text-sm font-bold">
-                        {{ __('umum.tombol.lihat_semua') }}
-                    </a>
-                @endif
-            </div>
 
-            <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                @foreach ($lso as $unit)
-                    <li class="brutal brutal-hover bg-paper p-4">
-                        <div class="brutal-sm mb-3 flex h-12 w-12 items-center justify-center bg-primary-600 font-display text-sm text-paper">
-                            {{ strtoupper(substr($unit['nama'], 0, 2)) }}
-                        </div>
-                        <h3 class="font-display text-base">{{ $unit['nama'] }}</h3>
-                        <p class="mt-1 text-sm text-muted">{{ $unit['bidang'] }}</p>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    </section>
+                <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    @foreach ($lso as $unit)
+                        <li>
+                            <a href="{{ $unit['tautan'] }}" class="brutal brutal-hover block h-full bg-paper p-4">
+                                <div class="brutal-sm mb-3 flex h-12 w-12 items-center justify-center bg-primary-600 font-display text-sm text-paper">
+                                    {{ strtoupper(substr($unit['nama'], 0, 2)) }}
+                                </div>
+                                <h3 class="font-display text-base">{{ $unit['nama'] }}</h3>
+                                <p class="mt-1 text-sm text-muted">{{ $unit['bidang'] }}</p>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </section>
+    @endif
 
     {{-- ============ BERITA TERBARU ============ --}}
     <section class="border-b-2 border-ink">

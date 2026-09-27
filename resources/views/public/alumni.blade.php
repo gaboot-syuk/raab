@@ -14,19 +14,13 @@
         :judul="__('umum.direktori.alumni_judul')"
         :deskripsi="__('umum.direktori.alumni_intro')"
         :remah="[__('umum.menu.organisasi'), __('umum.submenu.alumni')]"
-    >
-        @if ($jumlahMentor > 0)
-            <p class="mt-3 text-sm font-bold">
-                {{ __('umum.direktori.jumlah_mentor') }}: {{ $jumlahMentor }}
-            </p>
-        @endif
-    </x-public.judul-halaman>
+    />
 
     <div class="mx-auto max-w-6xl px-4 py-10 lg:px-6">
         <form method="GET" class="brutal grid gap-3 bg-paper p-4 sm:grid-cols-3 lg:grid-cols-6">
             <div>
                 <label for="cari" class="block text-xs font-bold uppercase text-muted">{{ __('umum.direktori.cari') }}</label>
-                <input id="cari" name="cari" type="search" value="{{ $saring['cari'] }}" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
+                <input id="cari" name="cari" type="search" value="{{ $saring['cari'] }}" placeholder="{{ __('umum.direktori.cari_bidang_instansi_domisili') }}" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
             </div>
 
             <div>
@@ -60,10 +54,7 @@
             </div>
 
             <div class="flex flex-col justify-end gap-2">
-                <label class="flex items-center gap-2 text-xs font-bold">
-                    <input type="checkbox" name="mentor" value="1" @checked($saring['mentor'] === '1') class="h-4 w-4 border-2 border-ink">
-                    {{ __('umum.direktori.hanya_mentor') }}
-                </label>
+
                 <div class="flex gap-2">
                     <button type="submit" class="brutal-sm brutal-hover bg-accent-400 px-3 py-2 text-sm font-bold text-primary-800">
                         {{ __('umum.direktori.terapkan') }}
@@ -74,7 +65,7 @@
         </form>
 
         <p class="mt-4 text-sm text-muted">
-            {{ __('umum.direktori.ditemukan') }}: <span class="font-bold text-ink">{{ $daftar->total() }}</span>
+            {{ __('umum.direktori.ditemukan') }}: <span class="font-bold text-ink">{{ $statistik['total']['tampil'] }}</span>
         </p>
 
         @if ($daftar->isEmpty())
@@ -84,19 +75,21 @@
         @else
             <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($daftar as $alumni)
-                    <li class="brutal flex flex-col bg-paper p-5">
-                        <h2 class="font-display text-lg leading-tight">
-                            @if (! empty($alumni['slug']))
-                                <a href="{{ route('public.prestasi.kader', $alumni['slug']) }}" class="hover:underline">{{ $alumni['nama'] }}</a>
-                            @else
-                                {{ $alumni['nama'] }}
-                            @endif
-                        </h2>
+                    {{--
+                        Tanpa nama, tanpa tautan profil, tanpa kontak.
 
-                        @if ($alumni['jabatan'] || $alumni['instansi'])
-                            <p class="mt-1 text-sm">
-                                {{ collect([$alumni['jabatan'], $alumni['instansi']])->filter()->join(' · ') }}
-                            </p>
+                        Tautan profil sengaja ikut dihapus, bukan hanya namanya:
+                        alamat /prestasi/kader/{slug} memuat slug yang berasal
+                        dari nama orang, jadi satu tautan saja sudah membatalkan
+                        seluruh penyamaran di halaman ini.
+                    --}}
+                    <li class="brutal flex flex-col bg-paper p-5">
+                        <p class="font-display text-lg leading-tight">
+                            {{ $alumni['instansi'] ?: __('umum.direktori.instansi_kosong') }}
+                        </p>
+
+                        @if ($alumni['jabatan'])
+                            <p class="mt-1 text-sm">{{ $alumni['jabatan'] }}</p>
                         @endif
 
                         <div class="mt-3 flex flex-wrap gap-1">
@@ -105,49 +98,15 @@
                                     {{ __('umum.direktori.lulus') }} {{ $alumni['tahun_lulus'] }}
                                 </span>
                             @endif
-                            @if ($alumni['angkatan'])
-                                <span class="border-2 border-ink bg-paper-alt px-1.5 py-0.5 text-[11px] font-bold">
-                                    {{ __('umum.direktori.angkatan') }} {{ $alumni['angkatan'] }}
-                                </span>
-                            @endif
-                            @if ($alumni['bersedia_mentor'])
-                                <span class="border-2 border-ink bg-success/25 px-1.5 py-0.5 text-[11px] font-bold uppercase">
-                                    {{ __('umum.direktori.mentor') }}
-                                </span>
+                            @if ($alumni['bidang'])
+                                <span class="border-2 border-ink bg-paper-alt px-1.5 py-0.5 text-[11px] font-bold">{{ $alumni['bidang'] }}</span>
                             @endif
                         </div>
 
-                        <dl class="mt-3 space-y-1 text-xs text-muted">
-                            @if ($alumni['domisili'])
-                                <div class="flex gap-2">
-                                    <dt class="font-bold uppercase">{{ __('umum.direktori.domisili') }}:</dt>
-                                    <dd>{{ $alumni['domisili'] }}</dd>
-                                </div>
-                            @endif
-                            @if ($alumni['bidang'])
-                                <div class="flex gap-2">
-                                    <dt class="font-bold uppercase">{{ __('umum.direktori.bidang') }}:</dt>
-                                    <dd>{{ $alumni['bidang'] }}</dd>
-                                </div>
-                            @endif
-                        </dl>
-
-                        @if ($alumni['topik_mentor'])
-                            <p class="mt-3 text-xs">
-                                <span class="font-bold uppercase">{{ __('umum.direktori.topik_mentor') }}:</span>
-                                {{ $alumni['topik_mentor'] }}
-                            </p>
-                        @endif
-
-                        {{-- Kontak hanya tampil bila alumni mengizinkannya --}}
-                        @if ($alumni['telepon'] || $alumni['email'])
-                            <p class="mt-auto border-t-2 border-ink/15 pt-3 text-xs">
-                                @if ($alumni['telepon'])
-                                    <a href="tel:{{ $alumni['telepon'] }}" class="font-bold underline">{{ $alumni['telepon'] }}</a>
-                                @endif
-                                @if ($alumni['email'])
-                                    <a href="mailto:{{ $alumni['email'] }}" class="ml-2 font-bold underline">{{ $alumni['email'] }}</a>
-                                @endif
+                        @if ($alumni['domisili'])
+                            <p class="mt-3 text-xs text-muted">
+                                <span class="font-bold uppercase">{{ __('umum.direktori.domisili') }}:</span>
+                                {{ $alumni['domisili'] }}
                             </p>
                         @endif
                     </li>
@@ -157,6 +116,45 @@
             <div class="mt-8">{{ $daftar->links() }}</div>
         @endif
 
+        {{-- Statistik agregat, diletakkan setelah daftar agar saringan dan hasilnya berdekatan. --}}
+        <section class="mt-10 border-t-2 border-ink pt-8">
+            <h2 class="font-display text-xl">{{ __('umum.direktori.statistik') }}</h2>
+            <p class="mt-1 text-sm text-muted">{{ __('umum.direktori.statistik_intro') }}</p>
+
+            <div class="brutal mt-4 bg-paper p-5">
+                <p class="text-xs font-bold uppercase tracking-wide text-muted">{{ __('umum.direktori.jumlah_alumni') }}</p>
+                <p class="font-display text-3xl leading-none">{{ $statistik['total']['tampil'] }}</p>
+            </div>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ([
+                    ['judul' => __('umum.direktori.per_tahun_lulus'), 'rincian' => $statistik['tahun_lulus']],
+                    ['judul' => __('umum.direktori.per_bidang'), 'rincian' => $statistik['bidang']],
+                    ['judul' => __('umum.direktori.per_domisili'), 'rincian' => $statistik['domisili']],
+                    ['judul' => __('umum.direktori.per_instansi'), 'rincian' => $statistik['instansi']],
+                ] as $blok)
+                    <div class="brutal bg-paper p-5">
+                        <h3 class="font-display text-base">{{ $blok['judul'] }}</h3>
+
+                        @if ($blok['rincian']->isEmpty())
+                            <p class="mt-2 text-sm text-muted">{{ __('umum.direktori.belum_ada_rincian') }}</p>
+                        @else
+                            <dl class="mt-3 space-y-1 text-sm">
+                                @foreach ($blok['rincian'] as $baris)
+                                    <div class="flex items-baseline justify-between gap-3 border-b border-ink/10 pb-1">
+                                        <dt class="truncate">{{ $baris['label'] }}</dt>
+                                        <dd class="font-bold">{{ $baris['tampil'] }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <p class="mt-3 text-xs text-muted">{{ __('umum.direktori.catatan_angka') }}</p>
+        </section>
+
         <p class="mt-8 border-t-2 border-ink pt-4 text-xs text-muted">
             {{ __('umum.direktori.catatan_privasi') }}
         </p>
@@ -164,10 +162,12 @@
         {{--
             Peta sebaran alumni.
 
-            Hanya alumni yang MENGISI koordinatnya sendiri yang muncul — dan
-            hanya kolom yang mereka izinkan. Data dikirim sebagai JSON lalu
-            digambar oleh Leaflet di peramban; tidak ada permintaan ke server
-            pihak ketiga selain ubin peta OpenStreetMap.
+            Hanya alumni yang MENGISI koordinatnya sendiri yang muncul di sini.
+            Titiknya tetap, tetapi keterangannya sudah dikosongkan dari
+            identitas: tanpa nama, tanpa instansi, dan tanpa tautan ke profil
+            kader. Data dikirim sebagai JSON lalu digambar oleh Leaflet di
+            peramban; tidak ada permintaan ke server pihak ketiga selain ubin
+            peta OpenStreetMap.
         --}}
         <section class="mt-10 border-t-2 border-ink pt-8">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -226,32 +226,36 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(peta);
 
-            // Isi popup dibangun sebagai simpul DOM, BUKAN rangkaian teks HTML,
-            // supaya nama atau instansi yang diketik alumni tidak dapat
-            // disisipkan sebagai markup di halaman ini.
+            /*
+             * Popup HANYA berisi kota dan tahun lulus.
+             *
+             * Tidak ada nama, tidak ada instansi, dan tidak ada tautan ke
+             * profil kader. Tautan itu yang paling berbahaya: alamatnya memuat
+             * slug yang berasal dari nama orang, sehingga satu klik saja sudah
+             * membatalkan seluruh penyamaran di halaman ini.
+             *
+             * Isinya dibangun sebagai simpul DOM, BUKAN rangkaian teks HTML,
+             * supaya nilai yang diketik alumni tidak dapat disisipkan sebagai
+             * markup di halaman ini.
+             */
             function isiPopup(t) {
                 var kotak = document.createElement('div');
 
-                var nama = document.createElement('strong');
-                nama.textContent = t.nama || '';
-                kotak.appendChild(nama);
+                var baris = [
+                    t.kota,
+                    t.tahun_lulus ? '{{ __('umum.direktori.lulus') }} ' + t.tahun_lulus : null
+                ].filter(Boolean);
 
-                [t.instansi, t.kota, t.tahun_lulus ? 'Lulus ' + t.tahun_lulus : null].forEach(function (baris) {
-                    if (!baris) { return; }
+                if (baris.length === 0) {
+                    baris = ['{{ __('umum.direktori.peta_tanpa_keterangan') }}'];
+                }
+
+                baris.forEach(function (teks) {
                     var p = document.createElement('div');
-                    p.textContent = baris;
+                    p.textContent = teks;
                     p.style.fontSize = '12px';
                     kotak.appendChild(p);
                 });
-
-                if (t.slug) {
-                    var tautan = document.createElement('a');
-                    tautan.href = '/prestasi/kader/' + t.slug;
-                    tautan.textContent = '{{ __('organisasi.peta.kunjungi') }} →';
-                    tautan.style.fontSize = '12px';
-                    tautan.style.fontWeight = 'bold';
-                    kotak.appendChild(tautan);
-                }
 
                 return kotak;
             }

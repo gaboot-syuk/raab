@@ -62,7 +62,7 @@ return [
     ],
     'peta' => [
         'judul' => 'Peta Sebaran Alumni',
-        'keterangan' => 'Titik di peta hanya muncul untuk alumni yang mengisi lintang & bujur di profilnya, dan hanya menampilkan data yang mereka izinkan.',
+        'keterangan' => 'Titik di peta hanya muncul untuk alumni yang mengisi lintang & bujur di profilnya. Keterangannya sengaja hanya berisi kota dan tahun lulus — tanpa nama, instansi, maupun tautan profil.',
         'kosong' => 'Belum ada alumni yang mengisi koordinat lokasinya.',
         'jumlah' => 'alumni tampil di peta',
         'kunjungi' => 'Lihat profil',

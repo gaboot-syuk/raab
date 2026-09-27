@@ -312,31 +312,31 @@ class Member extends Model
     }
 
     /**
-     * Data ringkas untuk direktori publik — hanya kolom yang diizinkan pemilik.
+     * Data ringkas untuk direktori publik.
+     *
+     * TIDAK memuat identitas apa pun — dan itu disengaja lebih kuat daripada
+     * penyaringan tampilan: nama, slug, NIM, telepon, email, alamat, keahlian,
+     * serta tautan media sosial tidak pernah diambil dari basis data untuk
+     * halaman ini. Yang dihapus hanya di tampilan tetap bisa bocor lewat
+     * cache, log, atau berkas HTML yang tersimpan; yang tidak pernah diambil
+     * tidak bisa bocor sama sekali.
+     *
+     * `slug` juga sengaja tidak ikut. Tautan ke /prestasi/kader/{slug} memuat
+     * nama orang di dalam alamatnya, sehingga menampilkannya sama saja
+     * menuliskan namanya.
+     *
+     * Yang tersisa adalah atribut akademis dan organisatoris yang memang sudah
+     * publik sejak awal.
      *
      * @return array<string, mixed>
      */
     public function untukDirektori(): array
     {
         return [
-            'id' => $this->id,
-            'nama' => $this->nama_lengkap,
-            // Hanya diisi bila pemiliknya MEMBUKA profil publiknya sendiri.
-            // Direktori memakainya untuk menautkan ke /prestasi/kader/{slug};
-            // tanpa izin itu, kartu tetap tampil tanpa tautan.
-            'slug' => $this->profil_publik ? $this->slug : null,
             'angkatan' => $this->angkatan,
             'fakultas' => $this->fakultas,
             'program_studi' => $this->bolehTampil('program_studi') ? $this->program_studi : null,
             'unit' => $this->unit?->nama,
-            'keahlian' => $this->bolehTampil('keahlian') ? ($this->keahlian ?? []) : [],
-            'sosmed' => $this->bolehTampil('sosmed') ? ($this->sosmed ?? []) : [],
-            'domisili' => $this->bolehTampil('kota_domisili')
-                ? $this->profilAlumni?->kota_domisili
-                : null,
-            'instansi' => $this->bolehTampil('instansi')
-                ? $this->profilAlumni?->instansi
-                : null,
         ];
     }
 }

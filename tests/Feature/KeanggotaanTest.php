@@ -326,7 +326,12 @@ class KeanggotaanTest extends TestCase
 
         $isi = (string) $this->get('/anggota')->assertOk()->getContent();
 
-        $this->assertStringContainsString('Nurul Hidayah', $isi);
+        /*
+         * Nama kini juga TIDAK boleh tampil. Sebelumnya uji ini justru
+         * mewajibkan nama ada; kebijakannya berubah, dan nama yang telanjur
+         * diindeks mesin pencari tidak dapat ditarik kembali.
+         */
+        $this->assertStringNotContainsString('Nurul Hidayah', $isi);
 
         // Data sensitif tidak boleh muncul meski tersimpan di basis data.
         $this->assertStringNotContainsString('2212345678', $isi);      // NIM
@@ -351,8 +356,14 @@ class KeanggotaanTest extends TestCase
 
         $isi = (string) $this->get('/alumni')->assertOk()->getContent();
 
-        $this->assertStringContainsString('Alumni Satu', $isi);
+        // Nama tidak lagi menjadi penanda di halaman ini, jadi yang diperiksa
+        // adalah jumlah yang benar-benar sampai ke tampilan: satu, yaitu alumni.
+        $this->assertStringNotContainsString('Alumni Satu', $isi);
         $this->assertStringNotContainsString('Kader Aktif', $isi);
+
+        $this->get('/alumni')
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar): bool => $daftar->total() === 1);
     }
 
     public function test_area_anggota_menampilkan_status_pengajuan(): void

@@ -22,6 +22,23 @@
         ['label' => __('umum.menu.arsip'), 'rute' => 'public.arsip'],
         ['label' => __('umum.menu.aspirasi'), 'rute' => 'public.aspirasi'],
     ];
+
+    /*
+     * Penanda nilai contoh pada kontak.
+     *
+     * Pemberitahuan ini TIDAK boleh bergantung pada alamat saja. Alamat dan
+     * media sosial sudah diisi pengurus, sementara email dan telepon masih
+     * memakai nilai contoh — kalau patokannya hanya alamat, peringatan hilang
+     * justru saat masih ada data palsu yang terbaca publik di halaman ini juga.
+     */
+    $penandaContoh = ['belum diisi', '08xx', '@raab.test'];
+
+    $kontakContoh = collect([
+        $situs['alamat'] ?? '',
+        $situs['email'] ?? '',
+        $situs['telepon'] ?? '',
+        $situs['whatsapp'] ?? '',
+    ])->contains(fn (mixed $nilai): bool => str((string) $nilai)->contains($penandaContoh));
 @endphp
 
 <footer class="border-t-2 border-ink bg-brand-dark text-on-brand">
@@ -102,10 +119,8 @@
             </div>
         </div>
 
-        {{-- Catatan data contoh: hilang sendiri setelah alamat diisi pengurus --}}
-        @if (! str_contains((string) ($situs['alamat'] ?? ''), 'belum diisi'))
-            {{-- alamat sudah diisi: tidak perlu pemberitahuan --}}
-        @else
+        {{-- Catatan data contoh: hilang sendiri setelah SELURUH kontak diisi pengurus. --}}
+        @if ($kontakContoh)
             <p class="mt-8 border-2 border-on-brand/40 px-3 py-2 text-xs text-on-brand/75">
                 {{ $situs['catatan_placeholder'] ?? __('umum.umum.placeholder') }}
             </p>

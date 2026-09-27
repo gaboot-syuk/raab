@@ -609,13 +609,15 @@ class OrganisasiTest extends TestCase
         $this->anggota(['nama_lengkap' => 'Anak Syariah', 'fakultas' => 'Syariah']);
         $this->anggota(['nama_lengkap' => 'Anak Tarbiyah', 'fakultas' => 'Tarbiyah']);
 
+        // Nama tidak lagi ditampilkan, jadi yang diperiksa adalah data yang
+        // benar-benar dikirim ke tampilan — bukan teks di halaman.
         $this->get('/anggota?fakultas=Tarbiyah')
             ->assertOk()
-            ->assertSee('Anak Tarbiyah', false)
-            ->assertDontSee('Anak Syariah', false);
+            ->assertViewHas('daftar', fn ($daftar): bool => $daftar->total() === 1
+                && $daftar->first()['fakultas'] === 'Tarbiyah');
     }
 
-    public function test_kontak_alumni_tersembunyi_kecuali_diizinkan(): void
+    public function test_kontak_alumni_tidak_pernah_tampil_di_direktori_publik(): void
     {
         $tertutup = $this->anggota([
             'nama_lengkap' => 'Alumni Tertutup',
@@ -639,10 +641,45 @@ class OrganisasiTest extends TestCase
 
         $isi = (string) $this->get('/alumni')->assertOk()->getContent();
 
-        // Nomor yang tidak diizinkan sama sekali tidak dikirim ke peramban.
+        /*
+         * Nomor telepon tidak pernah dikirim ke peramban — TERMASUK milik
+         * alumni yang mengizinkannya. Tanpa nama di kartunya, nomor itu sudah
+         * tidak berguna bagi siapa pun, sementara bagi pemiliknya ia tetap
+         * berarti membuka satu pintu lebih lebar daripada yang diminta.
+         */
         $this->assertStringNotContainsString('081111111111', $isi);
-        $this->assertStringContainsString('082222222222', $isi);
+        $this->assertStringNotContainsString('082222222222', $isi);
+
+        // Instansi tetap tunduk pada izin pemilik data.
+        $this->assertStringContainsString('Kantor Terbuka', $isi);
         $this->assertStringNotContainsString('Kantor Tertutup', $isi);
+    }
+
+    public function test_statistik_alumni_ikut_menghormati_izin_pemilik_data(): void
+    {
+        $terbuka = $this->anggota(['nama_lengkap' => 'Alumni Buka', 'status' => Member::STATUS_ALUMNI]);
+        $tertutup = $this->anggota(['nama_lengkap' => 'Alumni Tutup', 'status' => Member::STATUS_ALUMNI]);
+
+        foreach ([[$terbuka, 'Kantor Terbuka', 'Sukoharjo', true], [$tertutup, 'Kantor Tertutup', 'Rahasia', false]] as [$anggota, $instansi, $kota, $boleh]) {
+            $profil = new AlumniProfile;
+            $profil->member_id = $anggota->id;
+            $profil->instansi = $instansi;
+            $profil->kota_domisili = $kota;
+            $profil->kontak_publik = ['instansi' => $boleh, 'kota_domisili' => $boleh];
+            $profil->save();
+        }
+
+        /*
+         * Statistik agregat TIDAK boleh menjadi pintu belakang bagi izin yang
+         * sudah dipegang pemilik data. Sebelum ini kartunya menghormati izin
+         * sementara rinciannya tidak: instansi yang sengaja disembunyikan tetap
+         * disebut di daftar "Per instansi" — dan dengan angka di bawah lima,
+         * penyebutannya praktis menunjuk langsung ke orangnya.
+         */
+        $this->get('/alumni')
+            ->assertOk()
+            ->assertViewHas('statistik', fn (array $statistik): bool => $statistik['instansi']->pluck('label')->all() === ['Kantor Terbuka']
+                && $statistik['domisili']->pluck('label')->all() === ['Sukoharjo']);
     }
 
     public function test_direktori_alumni_dapat_disaring_per_instansi(): void
@@ -719,10 +756,16 @@ class OrganisasiTest extends TestCase
         $this->anggota(['nama_lengkap' => 'Anak Hukum', 'program_studi' => 'Hukum Tata Negara']);
         $this->anggota(['nama_lengkap' => 'Anak Komunikasi', 'program_studi' => 'Komunikasi']);
 
+        /*
+         * Yang diperiksa adalah data yang dikirim ke tampilan, bukan teks di
+         * halaman: daftar pilihan saringan selalu memuat SELURUH program studi
+         * yang ada, sehingga "Hukum Tata Negara" tetap muncul di halaman
+         * meskipun saringannya benar.
+         */
         $this->get('/anggota?prodi=Komunikasi')
             ->assertOk()
-            ->assertSee('Anak Komunikasi', false)
-            ->assertDontSee('Anak Hukum', false);
+            ->assertViewHas('daftar', fn ($daftar): bool => $daftar->total() === 1
+                && $daftar->first()['program_studi'] === 'Komunikasi');
     }
 
     public function test_peta_sebaran_hanya_memuat_alumni_yang_mengisi_koordinat(): void
@@ -770,53 +813,127 @@ class OrganisasiTest extends TestCase
         $this->assertCount(1, $data, 'Hanya alumni berkoordinat yang boleh masuk ke peta.');
         $this->assertEqualsWithDelta(-7.6833, (float) $data[0]['lat'], 0.0001);
         $this->assertEqualsWithDelta(110.8333, (float) $data[0]['lng'], 0.0001);
-        $this->assertSame('Alumni Berkoordinat', $data[0]['nama']);
-        $this->assertSame('Kantor Wilayah', $data[0]['instansi']);
+        $this->assertSame('Sukoharjo', $data[0]['kota']);
+
+        // Peta tidak lagi membawa identitas apa pun.
+        $this->assertSame(
+            ['kota', 'lat', 'lng', 'tahun_lulus'],
+            collect(array_keys($data[0]))->sort()->values()->all(),
+            'Peta tidak boleh membawa kolom selain kota, koordinat, dan tahun lulus.',
+        );
+        $this->assertStringNotContainsString('Alumni Berkoordinat', html_entity_decode($isi));
     }
 
-    public function test_instansi_alumni_tidak_masuk_peta_bila_tidak_diizinkan(): void
+    public function test_peta_alumni_tidak_memuat_identitas_meski_diizinkan(): void
     {
-        $anggota = $this->anggota(['nama_lengkap' => 'Alumni Tertutup Peta', 'status' => Member::STATUS_ALUMNI]);
+        $anggota = $this->anggota(['nama_lengkap' => 'Nama Di Peta', 'status' => Member::STATUS_ALUMNI]);
 
         $profil = new AlumniProfile;
         $profil->member_id = $anggota->id;
+        $profil->kota_domisili = 'Sukoharjo';
         $profil->latitude = -7.0;
         $profil->longitude = 110.0;
         $profil->instansi = 'Kantor Rahasia';
-        $profil->kontak_publik = ['instansi' => false];
+        $profil->kontak_publik = ['instansi' => true];
         $profil->save();
 
-        $isi = (string) $this->get('/alumni')->assertOk()->getContent();
+        $halaman = $this->get('/alumni')->assertOk();
+        $isi = (string) $halaman->getContent();
 
-        $mentah = \Illuminate\Support\Str::before(
-            \Illuminate\Support\Str::after($isi, 'data-titik="'),
-            '"',
-        );
+        /*
+         * Bahkan ketika pemiliknya SENDIRI mengizinkan instansinya tampil,
+         * peta tetap tidak membawanya. Peta menjawab pertanyaan "tersebar di
+         * mana", bukan "siapa".
+         */
+        $halaman->assertViewHas('peta', fn ($peta): bool => $peta->count() === 1
+            && ! array_key_exists('instansi', $peta->first())
+            && ! array_key_exists('nama', $peta->first())
+            && ! array_key_exists('slug', $peta->first()));
 
-        $data = json_decode(html_entity_decode($mentah), true);
-
-        $this->assertIsArray($data);
-        $this->assertCount(1, $data);
-        $this->assertNull($data[0]['instansi'], 'Instansi yang tidak diizinkan tidak boleh ikut ke peta.');
-        $this->assertStringNotContainsString('Kantor Rahasia', html_entity_decode($isi));
+        $this->assertStringNotContainsString('Nama Di Peta', html_entity_decode($isi));
     }
 
-    public function test_direktori_menautkan_ke_profil_publik_hanya_bila_dibuka(): void
+    public function test_direktori_tidak_menautkan_ke_profil_publik_meski_dibuka(): void
     {
         $terbuka = $this->anggota([
             'nama_lengkap' => 'Kader Terbuka',
             'profil_publik' => true,
         ]);
 
+        /*
+         * Profil publik per kader TETAP ada dan tetap dapat dibuka langsung —
+         * itu keputusan pemilik data sendiri (lihat PrestasiTest). Yang dihapus
+         * adalah TAUTANNYA dari direktori: alamat /prestasi/kader/{slug} memuat
+         * slug yang berasal dari nama orang, jadi satu tautan saja sudah
+         * membatalkan seluruh penyamaran di halaman ini.
+         */
         $this->get('/anggota')
             ->assertOk()
-            ->assertSee('/prestasi/kader/'.$terbuka->slug, false);
+            ->assertDontSee('/prestasi/kader/'.$terbuka->slug, false)
+            ->assertDontSee($terbuka->slug, false);
 
-        $terbuka->forceFill(['profil_publik' => false])->save();
+        $this->get('/prestasi/kader/'.$terbuka->slug)->assertOk();
+    }
+
+    public function test_direktori_publik_sama_sekali_tidak_memuat_nama(): void
+    {
+        $anggota = $this->anggota(['nama_lengkap' => 'Nama Yang Harus Hilang']);
+
+        $isi = (string) $this->get('/anggota')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('Nama Yang Harus Hilang', $isi);
+        // Slug berasal dari nama, jadi menampilkannya sama dengan menulis namanya.
+        $this->assertStringNotContainsString($anggota->slug, $isi);
+    }
+
+    public function test_pencarian_publik_tidak_mencocokkan_nama_dan_nim(): void
+    {
+        $this->anggota([
+            'nama_lengkap' => 'Nama Unik Sekali',
+            'nim' => '229999888777',
+            'program_studi' => 'Komunikasi',
+        ]);
+
+        /*
+         * Sebelumnya kotak cari mencocokkan nama dan NIM. Tanpa nama di layar,
+         * kotak itu berubah menjadi alat pembuktian: ketik sebuah nama, dan
+         * jumlah hasilnya langsung menjawab "orang ini kader sini atau bukan".
+         */
+        foreach (['Nama Unik Sekali', '229999888777'] as $kata) {
+            $this->get('/anggota?'.http_build_query(['cari' => $kata]))
+                ->assertOk()
+                ->assertViewHas('daftar', fn ($daftar): bool => $daftar->total() === 0);
+        }
+
+        // Yang masih boleh dicari: program studi.
+        $this->get('/anggota?cari=Komunikasi')
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar): bool => $daftar->total() === 1);
+    }
+
+    public function test_statistik_publik_menyamarkan_kelompok_kecil(): void
+    {
+        // Satu orang pada satu angkatan: angka "1" akan menunjuk tepat pada
+        // orang itu, jadi tidak boleh ditampilkan apa adanya.
+        $this->anggota(['angkatan' => 2024, 'program_studi' => 'Komunikasi']);
 
         $this->get('/anggota')
             ->assertOk()
-            ->assertDontSee('/prestasi/kader/'.$terbuka->slug, false);
+            ->assertViewHas('statistik', fn (array $statistik): bool => $statistik['total']['tampil'] === '<5'
+                && $statistik['angkatan']->first()['tampil'] === '<5'
+                && $statistik['angkatan']->first()['jumlah'] === 1);
+    }
+
+    public function test_statistik_publik_menampilkan_angka_bila_kelompoknya_cukup(): void
+    {
+        foreach (range(1, \App\Support\StatistikAman::AMBANG) as $abaikan) {
+            $this->anggota(['angkatan' => 2023, 'program_studi' => 'Komunikasi']);
+        }
+
+        $this->get('/anggota')
+            ->assertOk()
+            ->assertViewHas('statistik', fn (array $statistik): bool => $statistik['total']['tampil'] === '5'
+                && $statistik['angkatan']->first()['tampil'] === '5');
     }
 
     public function test_superadmin_dapat_mengubah_profil_publik_anggota(): void

@@ -61,7 +61,7 @@ return [
     ],
     'peta' => [
         'judul' => 'Alumni Distribution Map',
-        'keterangan' => 'Pins only appear for alumni who filled in their latitude & longitude, and only show what they allow.',
+        'keterangan' => 'Pins only appear for alumni who filled in their latitude & longitude. The label deliberately shows only the city and graduation year — no name, institution, or profile link.',
         'kosong' => 'No alumni has filled in a location yet.',
         'jumlah' => 'alumni shown on the map',
         'kunjungi' => 'View profile',

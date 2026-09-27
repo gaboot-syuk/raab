@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Models\OrganisationUnit;
 use App\Models\Slider;
 use App\Support\Pengaturan;
 use Illuminate\Support\Collection;
@@ -81,19 +82,33 @@ class BerandaController extends Controller
     }
 
     /**
-     * Daftar LSO untuk kartu di beranda.
-     * Pada Fase 1 masih memakai data placeholder agar tampilan tidak kosong.
+     * Kartu LSO di beranda — dibaca dari BASIS DATA, bukan daftar tetap.
      *
-     * @return array<int, array<string, mixed>>
+     * Sebelumnya daftar ini ditulis tetap sebagai placeholder, dan itu
+     * berbohong dua kali: beranda memamerkan lima LSO yang tidak ada di basis
+     * data, sementara halaman /lso — yang membaca basis data — menjawab
+     * "Belum ada data". Kartunya pun tidak bertaut ke mana pun, sehingga tidak
+     * ada cara memeriksa mana yang benar.
+     *
+     * Sekarang sumbernya sama dengan halaman /lso, dan tiap kartu bertaut ke
+     * halaman LSO-nya. Bila belum ada LSO sama sekali, beranda MENYEMBUNYIKAN
+     * bagian ini alih-alih menjanjikan yang tidak ada.
+     *
+     * @return Collection<int, array<string, mixed>>
      */
-    private function daftarLso(): array
+    private function daftarLso(): Collection
     {
-        return [
-            ['nama' => 'Mutasi', 'bidang' => __('umum.lso.mutasi'), 'warna' => 'primary'],
-            ['nama' => 'Harokatuna', 'bidang' => __('umum.lso.harokatuna'), 'warna' => 'accent'],
-            ['nama' => 'LDR', 'bidang' => __('umum.lso.ldr'), 'warna' => 'primary-500'],
-            ['nama' => 'LPM Albiruni', 'bidang' => __('umum.lso.albiruni'), 'warna' => 'danger'],
-            ['nama' => 'MJT', 'bidang' => __('umum.lso.mjt'), 'warna' => 'primary-800'],
-        ];
+        return OrganisationUnit::query()
+            ->lso()
+            ->aktif()
+            ->orderBy('urutan')
+            ->orderBy('nama')
+            ->get()
+            ->map(fn (OrganisationUnit $unit): array => [
+                'nama' => $unit->nama,
+                'bidang' => $unit->getTranslation('deskripsi', app()->getLocale(), false)
+                    ?: $unit->getTranslation('deskripsi', 'id', false),
+                'tautan' => '/lso/'.$unit->slug,
+            ]);
     }
 }

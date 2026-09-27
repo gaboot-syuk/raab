@@ -9,7 +9,7 @@
     <x-public.judul-halaman
         :judul="$judulAlbum"
         :deskripsi="Str::limit(strip_tags((string) $album->getTranslation('deskripsi', app()->getLocale(), false)), 220)"
-        :remah="[__('umum.menu.organisasi'), __('organisasi.galeri.judul'), $judulAlbum]"
+        :remah="[__('umum.menu.publikasi'), __('organisasi.galeri.judul'), $judulAlbum]"
     />
 
     <div class="mx-auto max-w-6xl px-4 py-10 lg:px-6">
