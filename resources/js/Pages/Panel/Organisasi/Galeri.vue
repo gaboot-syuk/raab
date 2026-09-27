@@ -5,6 +5,8 @@
  * Album dapat menempel pada satu unit, atau berdiri sendiri sebagai galeri
  * rayon (mis. dokumentasi Mapaba) — jadi `unit` boleh kosong.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -35,6 +37,8 @@ interface Agenda {
     lokasi: string | null;
     publik: boolean;
     mendatang: boolean;
+    gambar_media_id: number | null;
+    gambar: string | null;
 }
 
 const props = defineProps<{
@@ -48,6 +52,8 @@ const props = defineProps<{
 const tab = ref<'album' | 'agenda'>('album');
 const suntingAlbum = ref<number | null>(null);
 const suntingAgenda = ref<number | null>(null);
+const { wadah: wadahAlbum, gulirKeForm: gulirKeAlbum } = useGulirKeForm();
+const { wadah: wadahAgenda, gulirKeForm: gulirKeAgenda } = useGulirKeForm();
 const albumTerpilih = ref<Album | null>(null);
 
 const formAlbum = useForm({
@@ -74,6 +80,7 @@ const formAgenda = useForm({
     selesai: '',
     lokasi: '',
     publik: true,
+    gambar_media_id: null as number | null,
 });
 
 function resetAlbum(): void {
@@ -92,6 +99,8 @@ function suntingAlbumMaju(album: Album): void {
     formAlbum.lokasi = album.lokasi ?? '';
     formAlbum.publik = album.publik;
     formAlbum.urutan = album.urutan;
+
+    gulirKeAlbum();
 }
 
 function simpanAlbum(): void {
@@ -143,6 +152,9 @@ function suntingAgendaMaju(agenda: Agenda): void {
     formAgenda.selesai = agenda.selesai ?? '';
     formAgenda.lokasi = agenda.lokasi ?? '';
     formAgenda.publik = agenda.publik;
+    formAgenda.gambar_media_id = agenda.gambar_media_id;
+
+    gulirKeAgenda();
 }
 
 function simpanAgenda(): void {
@@ -171,6 +183,8 @@ function saringUnit(id: number | ''): void {
 <template>
     <PanelLayout>
         <Head title="Galeri & Agenda Unit" />
+
+        <PesanHasil />
 
         <div class="mx-auto max-w-5xl space-y-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
@@ -209,7 +223,7 @@ function saringUnit(id: number | ''): void {
 
             <!-- ============================ ALBUM ============================ -->
             <template v-if="tab === 'album'">
-                <form class="brutal bg-paper p-5" @submit.prevent="simpanAlbum">
+                <form ref="wadahAlbum" class="brutal bg-paper p-5" @submit.prevent="simpanAlbum">
                     <h2 class="font-display text-lg">{{ suntingAlbum ? 'Sunting Album' : 'Buat Album' }}</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -332,7 +346,7 @@ function saringUnit(id: number | ''): void {
 
             <!-- ============================ AGENDA ============================ -->
             <template v-else>
-                <form class="brutal bg-paper p-5" @submit.prevent="simpanAgenda">
+                <form ref="wadahAgenda" class="brutal bg-paper p-5" @submit.prevent="simpanAgenda">
                     <h2 class="font-display text-lg">{{ suntingAgenda ? 'Sunting Agenda' : 'Tambah Agenda' }}</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -372,6 +386,21 @@ function saringUnit(id: number | ''): void {
                             <input v-model="formAgenda.lokasi" type="text" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
                         </label>
 
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-bold uppercase text-muted">Gambar (opsional)</span>
+                            <select v-model="formAgenda.gambar_media_id" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm">
+                                <option :value="null">— tanpa gambar —</option>
+                                <option v-for="g in props.pilihanGambar" :key="g.id" :value="g.id">{{ g.nama }}</option>
+                            </select>
+                            <span v-if="formAgenda.errors.gambar_media_id" class="mt-1 block text-xs font-bold text-accent-600">{{ formAgenda.errors.gambar_media_id }}</span>
+                            <img
+                                v-if="props.pilihanGambar.find((g) => g.id === formAgenda.gambar_media_id)"
+                                :src="props.pilihanGambar.find((g) => g.id === formAgenda.gambar_media_id)!.url"
+                                alt=""
+                                class="brutal-sm mt-2 h-28 w-full object-cover"
+                            >
+                        </label>
+
                         <label class="block">
                             <span class="text-xs font-bold uppercase text-muted">Deskripsi</span>
                             <textarea v-model="formAgenda.deskripsi.id" rows="2" class="brutal-sm mt-1 w-full bg-paper-alt px-3 py-2 text-sm" />
@@ -397,6 +426,7 @@ function saringUnit(id: number | ''): void {
 
                     <ul v-else class="mt-3 divide-y-2 divide-ink/10">
                         <li v-for="agenda in props.agenda" :key="agenda.id" class="flex flex-wrap items-center gap-3 py-3">
+                            <img v-if="agenda.gambar" :src="agenda.gambar" alt="" class="h-14 w-14 shrink-0 border-2 border-ink object-cover">
                             <div class="min-w-0 flex-1">
                                 <p class="font-bold">
                                     {{ agenda.judul?.id }}

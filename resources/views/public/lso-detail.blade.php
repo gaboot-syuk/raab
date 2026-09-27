@@ -74,7 +74,15 @@
             @else
                 <ul class="mt-3 space-y-3">
                     @foreach ($agendaMendatang as $agenda)
-                        <li class="brutal bg-paper p-4">
+                        <li class="brutal overflow-hidden bg-paper p-4">
+                            @if ($gambar = $gambarAgenda[$agenda->gambar_media_id] ?? null)
+                                <img
+                                    src="{{ $gambar }}"
+                                    alt=""
+                                    class="brutal-sm mb-3 h-40 w-full object-cover"
+                                    loading="lazy" decoding="async"
+                                >
+                            @endif
                             <p class="text-xs font-bold uppercase text-accent-600">
                                 {{ $agenda->mulai->translatedFormat('d F Y, H:i') }}
                             </p>

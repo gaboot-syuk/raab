@@ -6,6 +6,8 @@
  * pembina, tokoh, kader yang datanya belum masuk). Salah satu dari keduanya
  * wajib terisi — server menegakkannya juga, bukan hanya di layar ini.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -34,6 +36,7 @@ const props = defineProps<{
 }>();
 
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 
 const form = useForm({
     period_id: props.periode?.id ?? null,
@@ -62,6 +65,8 @@ function mulaiSunting(baris: Penugasan): void {
     form.keterangan = baris.keterangan ?? '';
     form.urutan = baris.urutan;
     form.aktif = baris.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -95,6 +100,8 @@ function gantiPeriode(id: number): void {
     <PanelLayout>
         <Head title="Penugasan Pengurus" />
 
+        <PesanHasil />
+
         <div class="mx-auto max-w-5xl space-y-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -124,7 +131,7 @@ function gantiPeriode(id: number): void {
             </p>
 
             <template v-else>
-                <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+                <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                     <h2 class="font-display text-lg">
                         {{ sunting ? 'Sunting Penugasan' : 'Tambah Pengurus ke ' + props.periode.nama }}
                     </h2>

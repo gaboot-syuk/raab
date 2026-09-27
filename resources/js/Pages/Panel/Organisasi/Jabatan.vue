@@ -5,6 +5,8 @@
  * `level` mengatur kedalaman bagan struktur dan `urutan` mengatur urutan dalam
  * satu tingkat — keduanya langsung memengaruhi halaman /struktur.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -28,6 +30,7 @@ const props = defineProps<{
 }>();
 
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 
 const form = useForm({
     nama: '',
@@ -53,6 +56,8 @@ function mulaiSunting(jabatan: Jabatan): void {
     form.unit_id = jabatan.unit_id;
     form.rangkap_diizinkan = jabatan.rangkap_diizinkan;
     form.aktif = jabatan.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -78,6 +83,8 @@ function hapus(jabatan: Jabatan): void {
     <PanelLayout>
         <Head title="Jabatan" />
 
+        <PesanHasil />
+
         <div class="mx-auto max-w-5xl space-y-6">
             <div>
                 <h1 class="font-display text-2xl sm:text-3xl">Jabatan</h1>
@@ -86,7 +93,7 @@ function hapus(jabatan: Jabatan): void {
                 </p>
             </div>
 
-            <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">{{ sunting ? 'Sunting Jabatan' : 'Tambah Jabatan' }}</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

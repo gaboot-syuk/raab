@@ -12,7 +12,7 @@ use Spatie\Translatable\HasTranslations;
 /**
  * Agenda publik unit (biro & LSO).
  */
-#[Fillable(['unit_id', 'judul', 'deskripsi', 'mulai', 'selesai', 'lokasi', 'publik'])]
+#[Fillable(['unit_id', 'gambar_media_id', 'judul', 'deskripsi', 'mulai', 'selesai', 'lokasi', 'publik'])]
 class UnitAgenda extends Model
 {
     use HasTranslations;

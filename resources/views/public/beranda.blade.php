@@ -108,8 +108,8 @@
                     </p>
 
                     <div class="mt-8 flex flex-wrap gap-3">
-                        @if (Route::has('public.pendaftaran.mapaba'))
-                            <a href="{{ route('public.pendaftaran.mapaba') }}" class="brutal brutal-hover bg-accent-400 px-6 py-3 font-bold text-primary-800">
+                        @if (Route::has('public.pendaftaran'))
+                            <a href="{{ route('public.pendaftaran') }}" class="brutal brutal-hover bg-accent-400 px-6 py-3 font-bold text-primary-800">
                                 {{ __('umum.tombol.daftar_sekarang') }}
                             </a>
                         @endif
@@ -299,13 +299,11 @@
             <p class="mt-3 max-w-2xl font-semibold">{{ __('umum.beranda.pendaftaran_teks') }}</p>
 
             <div class="mt-6 flex flex-wrap gap-3">
-                @if (Route::has('public.pendaftaran.mapaba'))
-                    <a href="{{ route('public.pendaftaran.mapaba') }}" class="brutal brutal-hover bg-paper px-6 py-3 font-bold">
+                @if (Route::has('public.pendaftaran.jenis'))
+                    <a href="{{ route('public.pendaftaran.jenis', ['jenis' => 'mapaba']) }}" class="brutal brutal-hover bg-paper px-6 py-3 font-bold">
                         {{ __('umum.submenu.mapaba') }}
                     </a>
-                @endif
-                @if (Route::has('public.pendaftaran.pkd'))
-                    <a href="{{ route('public.pendaftaran.pkd') }}" class="brutal brutal-hover bg-primary-600 px-6 py-3 font-bold text-paper">
+                    <a href="{{ route('public.pendaftaran.jenis', ['jenis' => 'pkd']) }}" class="brutal brutal-hover bg-primary-600 px-6 py-3 font-bold text-paper">
                         {{ __('umum.submenu.pkd') }}
                     </a>
                 @endif

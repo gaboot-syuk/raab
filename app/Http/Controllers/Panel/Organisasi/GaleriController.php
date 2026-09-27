@@ -7,6 +7,7 @@ use App\Models\Gallery;
 use App\Models\GalleryItem;
 use App\Models\OrganisationUnit;
 use App\Models\UnitAgenda;
+use App\Support\PustakaMedia;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,28 +50,35 @@ class GaleriController extends Controller
                 'tautan_publik' => $galeri->publik ? '/galeri/'.$galeri->getTranslation('slug', 'id', false) : null,
             ]);
 
-        $agenda = UnitAgenda::query()
+        $agendaMentah = UnitAgenda::query()
             ->with('unit:id,nama')
             ->when($unitId > 0, fn ($q) => $q->where('unit_id', $unitId))
             ->orderByDesc('mulai')
             ->limit(60)
-            ->get()
-            ->map(fn (UnitAgenda $item): array => [
-                'id' => $item->id,
-                'judul' => $item->getTranslations('judul'),
-                'unit_id' => $item->unit_id,
-                'unit' => $item->unit?->nama,
-                'deskripsi' => $item->getTranslations('deskripsi'),
-                'mulai' => $item->mulai?->format('Y-m-d\TH:i'),
-                'selesai' => $item->selesai?->format('Y-m-d\TH:i'),
-                'lokasi' => $item->lokasi,
-                'publik' => $item->publik,
-                'mendatang' => $item->mulai?->isFuture() ?? false,
-            ]);
+            ->get();
+
+        // Satu kueri untuk SEMUA gambar agenda, bukan satu kueri per agenda.
+        $gambarAgenda = PustakaMedia::peta($agendaMentah->pluck('gambar_media_id'));
+
+        $agenda = $agendaMentah->map(fn (UnitAgenda $item): array => [
+            'id' => $item->id,
+            'judul' => $item->getTranslations('judul'),
+            'unit_id' => $item->unit_id,
+            'unit' => $item->unit?->nama,
+            'deskripsi' => $item->getTranslations('deskripsi'),
+            'mulai' => $item->mulai?->format('Y-m-d\TH:i'),
+            'selesai' => $item->selesai?->format('Y-m-d\TH:i'),
+            'lokasi' => $item->lokasi,
+            'publik' => $item->publik,
+            'mendatang' => $item->mulai?->isFuture() ?? false,
+            'gambar_media_id' => $item->gambar_media_id,
+            'gambar' => $item->gambar_media_id ? ($gambarAgenda[$item->gambar_media_id] ?? null) : null,
+        ]);
 
         return Inertia::render('Panel/Organisasi/Galeri', [
             'album' => $album,
             'agenda' => $agenda,
+            'pilihanGambar' => PustakaMedia::pilihan(),
             'filterUnit' => $unitId ?: null,
             'pilihanUnit' => OrganisationUnit::query()
                 ->orderBy('jenis')
@@ -183,6 +191,7 @@ class GaleriController extends Controller
 
         $agenda = new UnitAgenda;
         $agenda->unit_id = $data['unit_id'] ?? null;
+        $agenda->gambar_media_id = $data['gambar_media_id'] ?? null;
         $agenda->mulai = $data['mulai'];
         $agenda->selesai = $data['selesai'] ?? null;
         $agenda->lokasi = $data['lokasi'] ?? null;
@@ -199,6 +208,7 @@ class GaleriController extends Controller
         $data = $this->validasiAgenda($request);
 
         $agenda->unit_id = $data['unit_id'] ?? null;
+        $agenda->gambar_media_id = $data['gambar_media_id'] ?? null;
         $agenda->mulai = $data['mulai'];
         $agenda->selesai = $data['selesai'] ?? null;
         $agenda->lokasi = $data['lokasi'] ?? null;
@@ -254,6 +264,7 @@ class GaleriController extends Controller
             'deskripsi' => ['nullable', 'array'],
             'deskripsi.id' => ['nullable', 'string', 'max:2000'],
             'deskripsi.en' => ['nullable', 'string', 'max:2000'],
+            'gambar_media_id' => ['nullable', 'integer', 'exists:media,id'],
             'mulai' => ['required', 'date'],
             'selesai' => ['nullable', 'date', 'after_or_equal:mulai'],
             'lokasi' => ['nullable', 'string', 'max:190'],

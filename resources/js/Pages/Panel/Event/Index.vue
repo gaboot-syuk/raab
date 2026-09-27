@@ -5,6 +5,8 @@
  * Kuota sengaja boleh dikosongkan: kosong berarti TIDAK TERBATAS. Dibedakan
  * jelas dari 0 yang berarti tertutup.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -63,6 +65,7 @@ const props = defineProps<{
 }>();
 
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 const kelolaKolom = ref<number | null>(null);
 const suntingKolom = ref<number | null>(null);
 
@@ -116,6 +119,8 @@ function mulaiSunting(event: Event): void {
     form.lokasi = event.lokasi ?? '';
     form.urutan = event.urutan;
     form.aktif = event.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -192,6 +197,8 @@ function ringkasKeadaan(k: Keadaan): string {
     <PanelLayout>
         <Head title="Event Mapaba & PKD" />
 
+        <PesanHasil />
+
         <div class="mx-auto max-w-5xl space-y-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -207,7 +214,7 @@ function ringkasKeadaan(k: Keadaan): string {
             </div>
 
             <!-- Formulir -->
-            <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">{{ sunting ? 'Sunting Event' : 'Buat Event' }}</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

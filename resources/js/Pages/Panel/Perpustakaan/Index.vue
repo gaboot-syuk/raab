@@ -5,6 +5,7 @@
  * Status eksemplar yang sedang dipinjam TIDAK dapat diubah dari sini —
  * statusnya ditentukan oleh proses pengembalian di halaman Peminjaman.
  */
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PesanHasil from '@/Components/Panel/PesanHasil.vue';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -53,6 +54,7 @@ const props = defineProps<{
 }>();
 
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 const kelolaEksemplar = ref<number | null>(null);
 
 const form = useForm({
@@ -97,6 +99,8 @@ function mulaiSunting(buku: Buku): void {
     form.rak = buku.rak ?? '';
     form.is_public = buku.is_public;
     form.aktif = buku.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -173,7 +177,7 @@ function cariBuku(): void {
             </form>
 
             <!-- Formulir -->
-            <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">{{ sunting ? 'Sunting Buku' : 'Tambah Buku' }}</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

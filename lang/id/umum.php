@@ -12,6 +12,7 @@ return [
         'profil' => 'Profil',
         'organisasi' => 'Organisasi',
         'publikasi' => 'Publikasi',
+        'galeri' => 'Galeri',
         'prestasi' => 'Prestasi Kader',
         'layanan' => 'Layanan',
         'lso' => 'Sarekat LSO',

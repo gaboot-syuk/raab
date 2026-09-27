@@ -26,9 +26,9 @@
 
 <footer class="border-t-2 border-ink bg-brand-dark text-on-brand">
     <div class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
-        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
             {{-- Tentang --}}
-            <div>
+            <div class="col-span-2 lg:col-span-1">
                 <div class="flex items-center gap-3">
                     <img
                         src="{{ asset('brand/logo-pmii-raab.png') }}"
@@ -74,7 +74,7 @@
             </div>
 
             {{-- Kontak & sekretariat (placeholder sampai Fase 1 lanjutan) --}}
-            <div>
+            <div class="col-span-2 lg:col-span-1">
                 <h2 class="font-display text-sm uppercase tracking-wide">{{ __('umum.footer.kontak') }}</h2>
                 <ul class="mt-4 space-y-3 text-sm text-on-brand/85">
                     <li class="flex gap-2">

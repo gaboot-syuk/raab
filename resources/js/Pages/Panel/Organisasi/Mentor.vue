@@ -5,6 +5,7 @@
  * Kontak di sini HANYA untuk pengurus; di direktori publik kontak muncul bila
  * alumni mengizinkannya. Karena itu halaman ini dijaga izin `mentors.view`.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -48,6 +49,8 @@ function bersihkan(): void {
 <template>
     <PanelLayout>
         <Head title="Daftar Mentor" />
+
+        <PesanHasil />
 
         <div class="mx-auto max-w-5xl space-y-6">
             <div>

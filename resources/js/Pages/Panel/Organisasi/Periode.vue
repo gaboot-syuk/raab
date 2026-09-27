@@ -6,6 +6,8 @@
  * adalah agar periode yang masih punya penugasan tidak bisa dihapus, sehingga
  * riwayat kepengurusan tidak hilang tanpa sengaja.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -25,6 +27,7 @@ interface Periode {
 const props = defineProps<{ daftar: Periode[] }>();
 
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 
 const form = useForm({
     nama: '',
@@ -54,6 +57,8 @@ function mulaiSunting(periode: Periode): void {
     form.selesai = periode.selesai ?? '';
     form.urutan = periode.urutan;
     form.aktif = periode.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -87,6 +92,8 @@ function hapus(periode: Periode): void {
     <PanelLayout>
         <Head title="Periode Kepengurusan" />
 
+        <PesanHasil />
+
         <div class="mx-auto max-w-5xl space-y-6">
             <div>
                 <h1 class="font-display text-2xl sm:text-3xl">Periode Kepengurusan</h1>
@@ -97,7 +104,7 @@ function hapus(periode: Periode): void {
             </div>
 
             <!-- Formulir -->
-            <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">
                     {{ sunting ? 'Sunting Periode' : 'Tambah Periode' }}
                 </h2>

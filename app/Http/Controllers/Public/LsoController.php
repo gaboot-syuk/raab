@@ -9,6 +9,7 @@ use App\Models\OrganisationUnit;
 use App\Models\Period;
 use App\Models\PositionAssignment;
 use App\Models\UnitAgenda;
+use App\Support\PustakaMedia;
 use App\Support\Pengaturan;
 use Illuminate\View\View;
 
@@ -47,6 +48,27 @@ class LsoController extends Controller
         $periode = Period::sedangAktif()
             ?? Period::query()->orderByDesc('tahun_selesai')->first();
 
+        $agendaMendatang = UnitAgenda::query()
+            ->where('unit_id', $unit->id)
+            ->publik()
+            ->mendatang()
+            ->limit(6)
+            ->get();
+
+        $agendaLampau = UnitAgenda::query()
+            ->where('unit_id', $unit->id)
+            ->publik()
+            ->lampau()
+            ->limit(6)
+            ->get();
+
+        // Satu kueri untuk SEMUA gambar agenda. Memanggil pustaka per agenda
+        // akan menghasilkan satu kueri per baris pada halaman publik.
+        $gambarAgenda = PustakaMedia::peta(
+            $agendaMendatang->pluck('gambar_media_id')->merge($agendaLampau->pluck('gambar_media_id')),
+            'sedang',
+        );
+
         return view('public.lso-detail', [
             'situs' => Pengaturan::semua(),
             'unit' => $unit,
@@ -65,18 +87,9 @@ class LsoController extends Controller
                 ->urut()
                 ->limit(6)
                 ->get(),
-            'agendaMendatang' => UnitAgenda::query()
-                ->where('unit_id', $unit->id)
-                ->publik()
-                ->mendatang()
-                ->limit(6)
-                ->get(),
-            'agendaLampau' => UnitAgenda::query()
-                ->where('unit_id', $unit->id)
-                ->publik()
-                ->lampau()
-                ->limit(6)
-                ->get(),
+            'agendaMendatang' => $agendaMendatang,
+            'agendaLampau' => $agendaLampau,
+            'gambarAgenda' => $gambarAgenda,
         ]);
     }
 

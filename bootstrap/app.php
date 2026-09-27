@@ -13,6 +13,23 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         /*
+         * Aplikasi berjalan di BELAKANG PROXY yang memutus TLS.
+         *
+         * Render (dan hampir semua hosting gratis) menerima HTTPS di sisinya,
+         * lalu meneruskan permintaan ke wadah ini sebagai HTTP biasa sambil
+         * menitipkan header `X-Forwarded-Proto: https`. Tanpa baris ini Laravel
+         * mengabaikan header itu dan mengira permintaannya HTTP, sehingga
+         * tautan aset yang dihasilkan memakai `http://` padahal halamannya
+         * `https://` — peramban memblokirnya sebagai mixed content, dan
+         * akibatnya CSS serta JavaScript tidak termuat sama sekali: situsnya
+         * tampil polos tanpa gaya, dan halaman panel tidak jalan.
+         *
+         * `'*'` aman di sini karena wadah ini hanya dapat dijangkau lewat
+         * proxy tersebut; tidak ada jalan masuk langsung dari luar.
+         */
+        $middleware->trustProxies(at: '*');
+
+        /*
          * Header keamanan dipasang GLOBAL, bukan hanya di grup `web`: halaman
          * galat, berkas yang diunduh, dan jawaban JSON juga perlu membawanya.
          */

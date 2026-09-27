@@ -5,8 +5,10 @@
  * Unit yang masih dipakai tidak dapat dihapus — server menolak dengan alasan
  * yang jelas. Nonaktifkan saja agar riwayat anggota tetap utuh.
  */
+import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 interface Unit {
@@ -30,6 +32,7 @@ const props = defineProps<{ daftar: Unit[]; jenis: Record<string, string> }>();
 
 const sunting = ref<number | null>(null);
 const saringJenis = ref('');
+const { wadah, gulirKeForm } = useGulirKeForm();
 
 const form = useForm({
     jenis: 'lso',
@@ -57,6 +60,8 @@ function mulaiSunting(unit: Unit): void {
     form.warna = unit.warna ?? '';
     form.urutan = unit.urutan;
     form.aktif = unit.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -82,6 +87,8 @@ function hapus(unit: Unit): void {
     <PanelLayout>
         <Head title="Biro & LSO" />
 
+        <PesanHasil />
+
         <div class="mx-auto max-w-5xl space-y-6">
             <div>
                 <h1 class="font-display text-2xl sm:text-3xl">Biro & Lembaga Semi Otonom</h1>
@@ -91,7 +98,7 @@ function hapus(unit: Unit): void {
                 </p>
             </div>
 
-            <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">{{ sunting ? 'Sunting Unit' : 'Tambah Unit' }}</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -179,6 +186,9 @@ function hapus(unit: Unit): void {
                             <a v-if="unit.tautan_publik" :href="unit.tautan_publik" target="_blank" rel="noopener noreferrer" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold">
                                 Halaman Publik
                             </a>
+                            <Link :href="`/panel/organisasi/unit/${unit.id}`" class="brutal-sm bg-accent-400 px-3 py-1.5 text-xs font-bold text-primary-800">
+                                Kelola
+                            </Link>
                             <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="mulaiSunting(unit)">Sunting</button>
                             <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="hapus(unit)">Hapus</button>
                         </div>

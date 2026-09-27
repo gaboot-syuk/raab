@@ -122,6 +122,98 @@ class HalamanPublikTest extends TestCase
     }
 
     /**
+     * Tombol pendaftaran harus benar-benar tampil, bukan sekadar tidak error.
+     *
+     * Ketiganya dulu memanggil rute `public.pendaftaran.mapaba` yang tidak
+     * pernah didaftarkan. Karena semuanya dibungkus `Route::has()`, kegagalannya
+     * senyap: tombolnya hilang tanpa galat apa pun — halaman tetap 200 dan uji
+     * lain tetap hijau. Nama rute yang benar adalah `public.pendaftaran` untuk
+     * daftar kegiatan, dan `public.pendaftaran.jenis` untuk pintasan per jenis.
+     */
+    public function test_tombol_pendaftaran_tampil_dan_mengarah_ke_rute_yang_benar(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('href="'.route('public.pendaftaran').'"', false)
+            ->assertSee('href="'.route('public.pendaftaran.jenis', ['jenis' => 'mapaba']).'"', false)
+            ->assertSee('href="'.route('public.pendaftaran.jenis', ['jenis' => 'pkd']).'"', false)
+            ->assertSee(__('umum.tombol.daftar_sekarang'))
+            ->assertSee(__('umum.submenu.mapaba'))
+            ->assertSee(__('umum.submenu.pkd'));
+    }
+
+    /**
+     * Setiap butir navigasi bawah harus berupa tautan yang dapat diklik.
+     *
+     * Butir yang rutenya tidak dikenali dirender sebagai <span> abu-abu,
+     * sehingga pengguna melihat ikon yang tidak bisa ditekan tanpa penjelasan
+     * apa pun.
+     */
+    public function test_navigasi_bawah_sepenuhnya_berupa_tautan(): void
+    {
+        $isi = (string) $this->get('/')->assertOk()->getContent();
+
+        preg_match('~<nav[^>]*bottom-0[^>]*>(.*?)</nav>~s', $isi, $cocok);
+
+        $this->assertNotEmpty($cocok, 'Navigasi bawah tidak ditemukan pada beranda.');
+
+        $navigasi = $cocok[1];
+
+        $this->assertStringNotContainsString(
+            'text-muted',
+            $navigasi,
+            'Ada butir navigasi bawah yang dirender sebagai teks mati, bukan tautan.',
+        );
+        // Dihitung dengan pola, BUKAN `substr_count($navigasi, '<a ')`:
+        // atributnya ditulis bersambung ke baris berikutnya, sehingga rangkaian
+        // "<a " tidak pernah muncul dan hitungannya selalu nol.
+        $this->assertSame(
+            5,
+            preg_match_all('~<a\b~', $navigasi),
+            'Navigasi bawah seharusnya memuat lima tautan aktif.',
+        );
+    }
+
+    /**
+     * Footer memakai dua kolom pada layar kecil.
+     *
+     * Sebelumnya footer menumpuk menjadi satu kolom sehingga memanjang jauh ke
+     * bawah. Dua bagian terlebar (Tentang dan Kontak) dibiarkan membentang
+     * penuh supaya teksnya tidak terpotong.
+     */
+    public function test_footer_memakai_grid_dua_kolom_pada_layar_kecil(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4', false)
+            ->assertSee('col-span-2 lg:col-span-1', false);
+    }
+
+    /**
+     * Setiap butir dropdown navigasi harus berupa tautan yang dapat diklik.
+     *
+     * Kelima butir Publikasi dulu memanggil rute `public.publikasi.berita` dan
+     * kawan-kawan — nama yang tidak pernah didaftarkan. Karena semuanya
+     * dibungkus `Route::has()`, seluruh dropdown menjadi teks mati: terlihat,
+     * tetapi tidak bisa diklik, tanpa satu pun galat.
+     */
+    public function test_dropdown_navigasi_berisi_tautan_yang_dapat_diklik(): void
+    {
+        $isi = (string) $this->get('/')->assertOk()->getContent();
+
+        foreach (['berita', 'opini', 'kajian', 'esai', 'sastra'] as $tipe) {
+            $this->assertStringContainsString(
+                'href="'.route('public.publikasi.tipe', ['tipe' => $tipe]).'"',
+                $isi,
+                'Dropdown Publikasi kehilangan tautan untuk tipe '.$tipe.'.',
+            );
+        }
+
+        // Menu galeri ikut ditawarkan di dalam dropdown Publikasi.
+        $this->assertStringContainsString('href="'.route('public.galeri').'"', $isi);
+    }
+
+    /**
      * Periksa seluruh jalur sekaligus, lalu laporkan SEMUA yang gagal —
      * bukan hanya yang pertama — supaya perbaikan bisa dilakukan sekali jalan.
      *

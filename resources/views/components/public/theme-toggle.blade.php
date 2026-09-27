@@ -9,8 +9,8 @@
     <button
         type="button"
         @click="pilih('terang')"
-        :class="tema === 'terang' && 'bg-accent-400 text-primary-800'"
-        class="px-2 py-1 text-primary-800 hover:bg-accent-100"
+        :class="tema === 'terang' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
+        class="px-2 py-1"
         :aria-pressed="tema === 'terang'"
         title="{{ __('umum.tema.terang') }}"
     >
@@ -24,8 +24,8 @@
     <button
         type="button"
         @click="pilih('gelap')"
-        :class="tema === 'gelap' && 'bg-accent-400 text-primary-800'"
-        class="border-l-2 border-ink px-2 py-1 text-primary-800 hover:bg-accent-100"
+        :class="tema === 'gelap' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
+        class="border-l-2 border-ink px-2 py-1"
         :aria-pressed="tema === 'gelap'"
         title="{{ __('umum.tema.gelap') }}"
     >
@@ -38,8 +38,8 @@
     <button
         type="button"
         @click="pilih('sistem')"
-        :class="tema === 'sistem' && 'bg-accent-400 text-primary-800'"
-        class="border-l-2 border-ink px-2 py-1 text-primary-800 hover:bg-accent-100"
+        :class="tema === 'sistem' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
+        class="border-l-2 border-ink px-2 py-1"
         :aria-pressed="tema === 'sistem'"
         title="{{ __('umum.tema.sistem') }}"
     >

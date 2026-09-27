@@ -497,10 +497,25 @@ Route::middleware(['auth', 'verified'])->prefix('panel/organisasi')->name('panel
 
     Route::middleware('permission:units.view')->group(function () {
         Route::get('/unit', [UnitController::class, 'index'])->name('unit');
+
+        // Kelola SATU unit: pengurus, anggota, dan agenda (khusus LSO).
+        Route::get('/unit/{unit}', [UnitController::class, 'detail'])->name('unit.detail');
     });
 
     Route::middleware('permission:units.create')->group(function () {
         Route::post('/unit', [UnitController::class, 'simpan'])->name('unit.simpan');
+    });
+
+    /*
+     * Keanggotaan unit diatur dari halaman kelola unit.
+     *
+     * Izinnya `members.update`, BUKAN `units.update`: yang berubah adalah data
+     * anggota, dan Sekretaris sudah memegang izin itu. Memakai izin unit akan
+     * membuat Sekretaris bisa menyunting unit tetapi tidak bisa mengisinya.
+     */
+    Route::middleware('permission:members.update')->group(function () {
+        Route::post('/unit/{unit}/anggota', [UnitController::class, 'tambahAnggota'])->name('unit.anggota.tambah');
+        Route::delete('/unit/{unit}/anggota/{anggota}', [UnitController::class, 'lepasAnggota'])->name('unit.anggota.lepas');
     });
 
     Route::middleware('permission:units.update')->group(function () {

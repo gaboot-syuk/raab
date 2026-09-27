@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\AlumniProfile;
+use App\Models\MediaLibrary;
 use App\Models\Member;
 use App\Models\OrganisationUnit;
 use App\Models\Period;
 use App\Models\Position;
 use App\Models\PositionAssignment;
+use App\Models\UnitAgenda;
 use App\Models\User;
 use Database\Seeders\PageSeeder;
 use Database\Seeders\PeriodSeeder;
@@ -17,6 +19,8 @@ use Database\Seeders\SettingSeeder;
 use Database\Seeders\SocialLinkSeeder;
 use Database\Seeders\UnitSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -30,6 +34,12 @@ use Tests\TestCase;
 class OrganisasiTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * PNG 1×1 piksel, ditulis apa adanya supaya uji tidak bergantung pada
+     * ekstensi GD — yang memang tidak tersedia di lingkungan pengujian.
+     */
+    private const PNG_KECIL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
 
     protected function setUp(): void
     {
@@ -352,6 +362,235 @@ class OrganisasiTest extends TestCase
             'nama' => 'LSO Lingkungan',
             'slug' => 'lso-lingkungan',
         ]);
+    }
+
+    /* ========== Kelola unit: pengurus, anggota, agenda ========== */
+
+    public function test_halaman_kelola_unit_memuat_ketiga_bagian(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+        $unit = $this->lso('LSO Musik');
+
+        $this->actingAs($sekretaris)
+            ->get('/panel/organisasi/unit/'.$unit->id)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Panel/Organisasi/UnitDetail', false)
+                ->where('unit.nama', 'LSO Musik')
+                ->has('pengurus')
+                ->has('anggota')
+                ->has('agenda')
+                ->has('pilihanAnggota'),
+            );
+    }
+
+    /**
+     * Agenda hanya disajikan untuk LSO.
+     *
+     * Biro adalah bagian struktural rayon dan tidak menyelenggarakan agenda
+     * sendiri, jadi halaman unit biro tidak membawa data agenda.
+     */
+    public function test_agenda_hanya_disajikan_untuk_lso(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+
+        $lso = $this->lso('LSO Tari');
+        $biro = OrganisationUnit::query()->where('jenis', OrganisationUnit::JENIS_BIRO)->firstOrFail();
+
+        $this->actingAs($sekretaris)
+            ->get('/panel/organisasi/unit/'.$lso->id)
+            ->assertInertia(fn ($page) => $page->where('unit.lso', true));
+
+        $this->actingAs($sekretaris)
+            ->get('/panel/organisasi/unit/'.$biro->id)
+            ->assertInertia(fn ($page) => $page->where('unit.lso', false));
+    }
+
+    /**
+     * Agenda boleh memakai gambar dari pustaka media.
+     *
+     * Gambarnya dirujuk lewat `gambar_media_id`, bukan disimpan di kolom
+     * sendiri — mengikuti pola poster Event, supaya penggantian ukuran dan
+     * pembersihan berkas ditangani satu tempat.
+     *
+     * Uji ini memakai superadmin karena menyentuh TIGA gugus izin sekaligus
+     * (unggah media, kelola agenda, dan lihat unit). Izinnya sendiri diuji
+     * terpisah, bukan di sini.
+     */
+    public function test_agenda_dapat_memakai_gambar_dari_pustaka_media(): void
+    {
+        Storage::fake('public');
+
+        $pengurus = $this->pengurus('superadmin');
+        $unit = $this->lso('LSO Poster');
+
+        $this->actingAs($pengurus)
+            ->post('/panel/media', [
+                'berkas' => [UploadedFile::fake()->createWithContent('poster.png', base64_decode(self::PNG_KECIL))],
+                'koleksi' => 'gambar',
+                'alt' => 'Poster agenda',
+            ])
+            ->assertSessionHas('sukses');
+
+        $media = MediaLibrary::induk()->getMedia('gambar')->firstOrFail();
+
+        $this->actingAs($pengurus)
+            ->post('/panel/organisasi/agenda', [
+                'unit_id' => $unit->id,
+                'judul' => ['id' => 'Pengajian Rutin'],
+                'mulai' => '2026-10-10 19:00:00',
+                'gambar_media_id' => $media->id,
+                'publik' => true,
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertSame($media->id, (int) UnitAgenda::query()->firstOrFail()->gambar_media_id);
+
+        // Halaman kelola unit membawa id gambar DAN URL-nya untuk pratinjau.
+        $this->actingAs($pengurus)
+            ->get('/panel/organisasi/unit/'.$unit->id)
+            ->assertInertia(fn ($page) => $page
+                ->where('agenda.0.gambar_media_id', $media->id)
+                ->has('agenda.0.gambar')
+                ->has('pilihanGambar', 1),
+            );
+    }
+
+    public function test_agenda_tetap_sah_tanpa_gambar(): void
+    {
+        $konten = $this->pengurus('konten_manager');
+        $unit = $this->lso('LSO Tanpa Gambar');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/agenda', [
+                'unit_id' => $unit->id,
+                'judul' => ['id' => 'Rapat Tanpa Poster'],
+                'mulai' => '2026-10-11 19:00:00',
+                'publik' => true,
+            ])
+            ->assertSessionHas('sukses');
+
+        // Gambar bersifat opsional: agenda tanpa gambar tetap sah.
+        $this->assertNull(UnitAgenda::query()->firstOrFail()->gambar_media_id);
+    }
+
+    public function test_gambar_agenda_yang_tidak_ada_ditolak(): void
+    {
+        $konten = $this->pengurus('konten_manager');
+        $unit = $this->lso('LSO Salah Gambar');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/agenda', [
+                'unit_id' => $unit->id,
+                'judul' => ['id' => 'Agenda Salah'],
+                'mulai' => '2026-10-12 19:00:00',
+                'gambar_media_id' => 999999,
+            ])
+            ->assertSessionHasErrors('gambar_media_id');
+
+        $this->assertDatabaseCount('unit_agendas', 0);
+    }
+
+    public function test_anggota_dapat_ditambahkan_dan_dilepas_dari_unit(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+        $unit = $this->lso('LSO Teater');
+        $orang = $this->anggota(['nama_lengkap' => 'Anggota Teater']);
+
+        $this->assertNull($orang->unit_id);
+
+        $this->actingAs($sekretaris)
+            ->post('/panel/organisasi/unit/'.$unit->id.'/anggota', ['member_id' => $orang->id])
+            ->assertSessionHas('sukses');
+
+        $this->assertSame($unit->id, $orang->fresh()->unit_id);
+
+        $this->actingAs($sekretaris)
+            ->delete('/panel/organisasi/unit/'.$unit->id.'/anggota/'.$orang->id)
+            ->assertSessionHas('sukses');
+
+        $this->assertNull($orang->fresh()->unit_id);
+
+        // Anggotanya TIDAK dihapus — hanya kaitannya ke unit yang dilepas.
+        $this->assertDatabaseHas('members', ['id' => $orang->id]);
+    }
+
+    /**
+     * Memindahkan anggota berarti MENGGANTI unitnya, bukan menambah
+     * keanggotaan kedua. Pesannya dibedakan supaya pengurus sadar bahwa
+     * anggota itu berpindah, bukan sekadar ditambahkan.
+     */
+    public function test_memindahkan_anggota_mengganti_unit_lama(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+        $asal = $this->lso('LSO Asal');
+        $tujuan = $this->lso('LSO Tujuan');
+        $orang = $this->anggota(['nama_lengkap' => 'Budi Pindah', 'unit_id' => $asal->id]);
+
+        $this->actingAs($sekretaris)
+            ->post('/panel/organisasi/unit/'.$tujuan->id.'/anggota', ['member_id' => $orang->id])
+            ->assertSessionHas('sukses', 'Anggota Budi Pindah dipindahkan ke LSO Tujuan.');
+
+        $this->assertSame($tujuan->id, $orang->fresh()->unit_id);
+    }
+
+    public function test_melepas_anggota_dari_unit_yang_salah_ditolak(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+        $unit = $this->lso('LSO Salah');
+        $orang = $this->anggota(['nama_lengkap' => 'Bukan Anggota Sini']);
+
+        $this->actingAs($sekretaris)
+            ->delete('/panel/organisasi/unit/'.$unit->id.'/anggota/'.$orang->id)
+            ->assertSessionHas('galat');
+
+        $this->assertNull($orang->fresh()->unit_id);
+    }
+
+    public function test_pengurus_dapat_ditunjuk_lewat_halaman_kelola_unit(): void
+    {
+        $sekretaris = $this->pengurus('sekretaris');
+        $unit = $this->lso('LSO Kaderisasi');
+        $periode = Period::query()->aktif()->firstOrFail();
+
+        $jabatan = new Position;
+        $jabatan->nama = 'Ketua';
+        $jabatan->level = 2;
+        $jabatan->urutan = 0;
+        $jabatan->unit_id = $unit->id;
+        $jabatan->rangkap_diizinkan = false;
+        $jabatan->aktif = true;
+        $jabatan->save();
+
+        $orang = $this->anggota(['nama_lengkap' => 'Ketua Terpilih', 'unit_id' => $unit->id]);
+
+        $this->actingAs($sekretaris)
+            ->post('/panel/organisasi/penugasan', [
+                'period_id' => $periode->id,
+                'position_id' => $jabatan->id,
+                'member_id' => $orang->id,
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->actingAs($sekretaris)
+            ->get('/panel/organisasi/unit/'.$unit->id)
+            ->assertInertia(fn ($page) => $page
+                ->where('pengurus.0.jabatan', 'Ketua')
+                ->where('pengurus.0.nama', 'Ketua Terpilih'),
+            );
+    }
+
+    public function test_pengurus_tanpa_izin_tidak_dapat_mengubah_anggota_unit(): void
+    {
+        $unit = $this->lso('LSO Terkunci');
+        $orang = $this->anggota(['nama_lengkap' => 'Tidak Boleh Pindah']);
+        $tanpaPeran = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($tanpaPeran)
+            ->post('/panel/organisasi/unit/'.$unit->id.'/anggota', ['member_id' => $orang->id])
+            ->assertForbidden();
+
+        $this->assertNull($orang->fresh()->unit_id);
     }
 
     /* ===================== Anggota & alumni ===================== */

@@ -6,6 +6,7 @@
  * jumlah pada formulir di bawah hanya ada saat aset BARU didaftarkan, dan
  * nilainya dicatat sebagai mutasi "barang masuk".
  */
+import { useGulirKeForm } from '@/composables/useGulirKeForm';
 import PesanHasil from '@/Components/Panel/PesanHasil.vue';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -58,6 +59,7 @@ const props = defineProps<{
 
 const tab = ref<'aset' | 'kategori' | 'riwayat'>('aset');
 const sunting = ref<number | null>(null);
+const { wadah, gulirKeForm } = useGulirKeForm();
 const kelolaKategori = ref(false);
 const mutasiUntuk = ref<Aset | null>(null);
 
@@ -107,6 +109,8 @@ function mulaiSunting(aset: Aset): void {
     form.nilai = aset.nilai;
     form.is_public = aset.is_public;
     form.aktif = aset.aktif;
+
+    gulirKeForm();
 }
 
 function simpan(): void {
@@ -191,7 +195,7 @@ function saringkan(): void {
 
             <!-- ============================ ASET ============================ -->
             <template v-if="tab === 'aset'">
-                <form class="brutal bg-paper p-5" @submit.prevent="simpan">
+                <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                     <h2 class="font-display text-lg">{{ sunting ? 'Sunting Aset' : 'Daftarkan Aset' }}</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

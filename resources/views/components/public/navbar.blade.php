@@ -18,12 +18,21 @@
             ['label' => __('umum.menu.lso'), 'rute' => 'public.lso'],
             ['label' => __('umum.submenu.alumni'), 'rute' => 'public.alumni'],
         ]],
+        /*
+         * Rute artikel adalah `public.publikasi.tipe` BERPARAMETER, bukan satu
+         * rute per tipe. Kelima butir di bawah dulu menulis
+         * `public.publikasi.berita` dan kawan-kawan — nama yang tidak pernah
+         * didaftarkan. Karena setiap butir dibungkus `Route::has()`, semuanya
+         * jatuh ke cabang <span> dan seluruh dropdown menjadi teks mati yang
+         * tidak bisa diklik, tanpa satu pun galat.
+         */
         ['label' => __('umum.menu.publikasi'), 'rute' => 'public.publikasi', 'anak' => [
-            ['label' => __('umum.submenu.berita'), 'rute' => 'public.publikasi.berita'],
-            ['label' => __('umum.submenu.opini'), 'rute' => 'public.publikasi.opini'],
-            ['label' => __('umum.submenu.kajian'), 'rute' => 'public.publikasi.kajian'],
-            ['label' => __('umum.submenu.esai'), 'rute' => 'public.publikasi.esai'],
-            ['label' => __('umum.submenu.sastra'), 'rute' => 'public.publikasi.sastra'],
+            ['label' => __('umum.submenu.berita'), 'rute' => 'public.publikasi.tipe', 'params' => ['tipe' => 'berita']],
+            ['label' => __('umum.submenu.opini'), 'rute' => 'public.publikasi.tipe', 'params' => ['tipe' => 'opini']],
+            ['label' => __('umum.submenu.kajian'), 'rute' => 'public.publikasi.tipe', 'params' => ['tipe' => 'kajian']],
+            ['label' => __('umum.submenu.esai'), 'rute' => 'public.publikasi.tipe', 'params' => ['tipe' => 'esai']],
+            ['label' => __('umum.submenu.sastra'), 'rute' => 'public.publikasi.tipe', 'params' => ['tipe' => 'sastra']],
+            ['label' => __('umum.menu.galeri'), 'rute' => 'public.galeri'],
         ]],
         /*
          * Tanpa submenu. Dulu di sini ada tautan "Profil Kader" ke
@@ -94,7 +103,7 @@
                             @foreach ($item['anak'] as $anak)
                                 <li>
                                     @if (Route::has($anak['rute']))
-                                        <a href="{{ route($anak['rute']) }}" class="block px-4 py-2 text-sm font-semibold hover:bg-accent-400">
+                                        <a href="{{ route($anak['rute'], $anak['params'] ?? []) }}" class="block px-4 py-2 text-sm font-semibold hover:bg-accent-400">
                                             {{ $anak['label'] }}
                                         </a>
                                     @else
@@ -128,14 +137,14 @@
                 @if (Route::has('login'))
                     <a
                         href="{{ route('login') }}"
-                        class="hidden border-2 border-ink bg-paper px-4 py-2 text-sm font-bold text-primary-800 brutal-hover lg:block"
+                        class="hidden border-2 border-ink bg-paper px-4 py-2 text-sm font-bold text-ink brutal-hover lg:block"
                     >{{ __('umum.tombol.masuk') }}</a>
                 @endif
             @endauth
 
-            @if (Route::has('public.pendaftaran.mapaba'))
+            @if (Route::has('public.pendaftaran'))
                 <a
-                    href="{{ route('public.pendaftaran.mapaba') }}"
+                    href="{{ route('public.pendaftaran') }}"
                     class="hidden border-2 border-ink bg-accent-400 px-4 py-2 text-sm font-bold text-primary-800 brutal-hover sm:block"
                 >{{ __('umum.tombol.daftar_sekarang') }}</a>
             @endif
@@ -143,7 +152,7 @@
             {{-- Tombol menu mobile --}}
             <button
                 type="button"
-                class="border-2 border-ink bg-paper p-2 text-primary-800 lg:hidden"
+                class="border-2 border-ink bg-paper p-2 text-ink lg:hidden"
                 @click="buka = true"
                 aria-controls="menu-mobile"
                 :aria-expanded="buka"
@@ -173,7 +182,7 @@
             <span class="font-display text-sm">{{ __('umum.menu.layanan') }}</span>
             <button
                 type="button"
-                class="border-2 border-ink bg-paper p-1 text-primary-800"
+                class="border-2 border-ink bg-paper p-1 text-ink"
                 @click="buka = false"
                 aria-label="{{ __('umum.tombol.tutup') }}"
             >
@@ -207,7 +216,7 @@
                             @foreach ($item['anak'] as $anak)
                                 <li>
                                     @if (Route::has($anak['rute']))
-                                        <a href="{{ route($anak['rute']) }}" class="block px-6 py-2 text-sm font-semibold">{{ $anak['label'] }}</a>
+                                        <a href="{{ route($anak['rute'], $anak['params'] ?? []) }}" class="block px-6 py-2 text-sm font-semibold">{{ $anak['label'] }}</a>
                                     @else
                                         <span class="block px-6 py-2 text-sm font-semibold text-muted">{{ $anak['label'] }}</span>
                                     @endif
