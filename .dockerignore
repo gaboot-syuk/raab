@@ -12,3 +12,11 @@ docs
 *.md
 .env
 .phpunit.result.cache
+
+# Tes tidak perlu ikut ke dalam citra produksi. `composer install --no-dev`
+# tidak memasang PHPUnit, jadi tes memang tidak akan pernah bisa dijalankan di
+# sana — mengirimnya hanya menambah isi citra tanpa guna.
+#
+# Ini diabaikan di SINI, bukan di `.gitignore`, supaya tesnya tetap tersimpan
+# lengkap di repositori sementara citra tetap ramping.
+tests

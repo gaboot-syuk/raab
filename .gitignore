@@ -67,4 +67,14 @@ Thumbs.db
 /AGENTS.md
 /CLAUDE.md
 /docs/
-/tests/
+
+# CATATAN: `tests/` SENGAJA TIDAK diabaikan di sini.
+#
+# Tes adalah kode sumber, bukan berkas hasil build. Ratusan tes adalah jaring
+# pengaman proyek ini, dan repositori adalah tempat menyimpannya. Kalau tes
+# hanya ada di satu laptop, satu kerusakan mesin menghapusnya untuk selamanya,
+# dan `git clone` tidak lagi menghasilkan proyek yang utuh — orang lain tidak
+# bisa memverifikasi perbaikan apa pun.
+#
+# Yang tidak perlu ikut hanyalah CITRA PRODUKSI. Untuk itu alatnya
+# `.dockerignore`, bukan berkas ini — lihat entri `tests` di sana.
