@@ -29,9 +29,33 @@ sed "s/\${PORT}/${PORT}/g" /var/www/html/docker/prod/nginx.conf.template > /etc/
 echo "[masuk] Menunggu basis data siap…"
 # Menunggu, bukan menyerah. Wadah aplikasi dan basis data biasanya menyala
 # bersamaan, dan basis datanya selalu siap belakangan.
+#
+# Menanyakan SATU hal saja: apakah basis data TERJANGKAU?
+#
+# Sebelumnya di sini dipanggil `migrate:status`, dan itu pertanyaan yang
+# BERBEDA. Perintah itu keluar dengan kode gagal ketika tabel `migrations`
+# belum ada (StatusCommand: `repositoryExists()` == false) — keadaan yang
+# bukan tanda apa pun tentang sambungan. Pada penyebaran pertama ke basis data
+# baru, jawabannya SELALU "belum ada", sehingga wadah menunggu 60 detik penuh,
+# mencetak "Basis data tidak dapat dihubungi", dan memicu Render mengeluh
+# "No open ports detected" — padahal `migrate` yang berjalan tepat sesudahnya
+# berhasil seketika. Pemeriksaan yang berbohong lebih buruk daripada tidak ada
+# pemeriksaan: ia mengirim orang mencari kerusakan jaringan yang tidak ada.
+#
+# Sekarang pertanyaannya sama persis dengan yang ditanyakan /health, lewat
+# kode yang sama (`App\Support\PemeriksaBasisData`).
+basis_data_terjangkau() {
+    php -r '
+        require "/var/www/html/vendor/autoload.php";
+        $app = require "/var/www/html/bootstrap/app.php";
+        $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+        exit($app->make(App\Support\PemeriksaBasisData::class)->terjangkau() ? 0 : 1);
+    ' >/dev/null 2>&1
+}
+
 selesai=0
 for i in $(seq 1 30); do
-    if php /var/www/html/artisan migrate:status >/dev/null 2>&1; then
+    if basis_data_terjangkau; then
         selesai=1
         break
     fi
