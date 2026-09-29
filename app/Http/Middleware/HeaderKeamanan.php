@@ -93,13 +93,18 @@ class HeaderKeamanan
         $skrip = trim(self::SUMBER_LUAR['skrip'].' '.($captcha ?? ''));
         $bingkai = trim("'self'".($captcha ? ' '.$captcha : ''));
 
+        // Penyimpanan media bisa berada di luar situs ini (R2/S3). Bila begitu,
+        // asalnya WAJIB diizinkan di sini — kalau tidak, seluruh gambar
+        // diblokir peramban tanpa galat apa pun.
+        $gambar = trim(self::SUMBER_LUAR['gambar'].' '.($this->asalMediaLuar() ?? ''));
+
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' ".$skrip,
             "style-src 'self' 'unsafe-inline' ".self::SUMBER_LUAR['gaya'],
             // `data:` untuk gambar tempelan, `blob:` untuk pratinjau unggahan
             // sebelum berkasnya benar-benar terkirim.
-            "img-src 'self' data: blob: ".self::SUMBER_LUAR['gambar'],
+            "img-src 'self' data: blob: ".$gambar,
             "font-src 'self' data:",
             "connect-src 'self' ".$captcha,
             "media-src 'self'",
@@ -109,5 +114,40 @@ class HeaderKeamanan
             "base-uri 'self'",
             "form-action 'self'",
         ]);
+    }
+
+    /**
+     * Asal berkas media, bila disimpan di luar situs ini.
+     *
+     * Situs ini membatasi `img-src`, jadi begitu media pindah ke penyimpanan
+     * luar (Cloudflare R2 / S3), alamatnya WAJIB diizinkan di sini. Tanpa itu
+     * gambarnya diblokir peramban — dan yang terlihat pengurus hanyalah gambar
+     * hilang tanpa penjelasan, persis kegagalan yang sudah pernah terjadi dan
+     * dicatat di `config/filesystems.php`.
+     *
+     * Yang diambil hanya SKEMA dan HOST-nya (`https://contoh.r2.dev`), bukan
+     * jalur berkasnya: kebijakan gambar tidak perlu tahu lebih dari itu.
+     *
+     * Selama disknya masih `local`/`public` — yaitu keadaan pengembangan dan
+     * keadaan sebelum R2 dipasang — fungsi ini mengembalikan null, sehingga
+     * kebijakannya tetap seketat sebelumnya. Tidak ada domain yang diizinkan
+     * hanya karena suatu saat nanti akan dipakai.
+     */
+    private function asalMediaLuar(): ?string
+    {
+        $nama = (string) (config('media-library.disk_name') ?: config('filesystems.default'));
+        $disk = config("filesystems.disks.{$nama}");
+
+        if (! is_array($disk) || ($disk['driver'] ?? null) !== 's3') {
+            return null;
+        }
+
+        $bagian = parse_url((string) ($disk['url'] ?? ''));
+
+        if (! isset($bagian['scheme'], $bagian['host'])) {
+            return null;
+        }
+
+        return $bagian['scheme'].'://'.$bagian['host'];
     }
 }

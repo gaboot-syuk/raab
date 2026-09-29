@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Listeners\CatatPekerjaanGagal;
+use App\Listeners\KecilkanGambar;
 use App\Support\KataSandi;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,5 +44,15 @@ class AppServiceProvider extends ServiceProvider
          * yang sudah tahu ada masalah.
          */
         Event::listen(JobFailed::class, CatatPekerjaanGagal::class);
+
+        /*
+         * Gambar dikecilkan tepat setelah berkasnya tersimpan.
+         *
+         * Foto ponsel 4–6 MB menjadi sekitar 300 KB tanpa beda yang terlihat di
+         * layar, sehingga jatah penyimpanan menampung puluhan ribu gambar alih-
+         * alih dua ribuan. Dipasang sebagai pendengar peristiwa supaya berlaku
+         * untuk SELURUH jalur unggah, termasuk yang belum ada hari ini.
+         */
+        Event::listen(MediaHasBeenAddedEvent::class, KecilkanGambar::class);
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\PemeriksaBasisData;
 use Database\Seeders\PageSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\SettingSeeder;
@@ -339,6 +340,69 @@ class MonitoringTest extends TestCase
         // Alamatnya harus satu. Kalau ia ikut berprefiks bahasa, memanggilnya
         // dari layanan penjadwal jadi tidak bisa diandalkan.
         $this->get('/en/internal/scheduler/token-uji-penjadwal')->assertNotFound();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Pemeriksaan kesehatan                                               */
+    /* ------------------------------------------------------------------ */
+
+    public function test_titik_kesehatan_menjawab_ok(): void
+    {
+        $this->get('/health')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('basis_data', 'terjangkau');
+    }
+
+    public function test_alamat_kesehatan_tidak_berprefiks_bahasa(): void
+    {
+        /*
+         * Sama seperti pemicu penjadwal: layanan pemantau tidak tahu apa-apa
+         * soal bahasa situs ini, dan alamat yang bercabang membuat
+         * pendaftarannya mudah salah.
+         */
+        $this->get('/en/health')->assertNotFound();
+    }
+
+    public function test_titik_kesehatan_menjawab_503_saat_basis_data_gagal(): void
+    {
+        /*
+         * Pemeriksanya disuntik, bukan dengan mengganti `database.default`.
+         * Cara itu memang membuat sambungannya gagal, tetapi juga meninggalkan
+         * transaksi uji dalam keadaan terbuka dan menumbangkan enam uji
+         * berikutnya.
+         */
+        $this->app->instance(PemeriksaBasisData::class, new class extends PemeriksaBasisData
+        {
+            public function terjangkau(): bool
+            {
+                return false;
+            }
+        });
+
+        $this->get('/health')
+            ->assertStatus(503)
+            ->assertJsonPath('status', 'terganggu')
+            ->assertJsonPath('basis_data', 'tidak terjangkau');
+    }
+
+    public function test_titik_kesehatan_tidak_membocorkan_rincian_sambungan(): void
+    {
+        $this->app->instance(PemeriksaBasisData::class, new class extends PemeriksaBasisData
+        {
+            public function terjangkau(): bool
+            {
+                return false;
+            }
+        });
+
+        $isi = (string) $this->get('/health')->getContent();
+
+        // Jalur ini terbuka tanpa masuk, jadi jawabannya tidak boleh memuat
+        // apa pun yang berguna bagi yang sedang memetakan sasaran.
+        foreach (['password', 'defaultdb', 'avnadmin', 'aivencloud', 'SQLSTATE'] as $rahasia) {
+            $this->assertStringNotContainsString($rahasia, $isi, "Titik kesehatan membocorkan: {$rahasia}");
+        }
     }
 
     /* ------------------------------------------------------------------ */

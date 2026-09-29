@@ -212,7 +212,9 @@ class PrestasiController extends Controller
         $media = MediaLibrary::induk()
             ->addMedia($request->file('sertifikat'))
             ->usingName('Sertifikat '.$request->user()->name)
-            ->toMediaCollection('dokumen', 'public');
+            // Tanpa disk tetap: ikuti MEDIA_DISK, supaya berkasnya benar-benar
+            // tersimpan di penyimpanan permanen yang sedang dipakai.
+            ->toMediaCollection('dokumen');
 
         return (int) $media->id;
     }

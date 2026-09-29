@@ -33,7 +33,12 @@ const props = defineProps<{
     saring: { koleksi: string; tipe: string; cari: string };
     pilihanKoleksi: Record<string, string>;
     batasMb: number;
-    totalUkuran: string;
+    penyimpanan: {
+        terpakai: string;
+        kuota: string;
+        persen: number | null;
+        status: 'aman' | 'waspada' | 'lewat';
+    };
 }>();
 
 /* ===== Unggah berkas ===== */
@@ -141,12 +146,43 @@ async function salinTautan(berkas: Berkas) {
                 <div>
                     <h1 class="font-display text-2xl sm:text-3xl">Pustaka Media</h1>
                     <p class="mt-1 text-sm text-muted">
-                        {{ daftar.total }} berkas · total {{ totalUkuran }}
+                        {{ daftar.total }} berkas · total {{ penyimpanan.terpakai }}
                     </p>
                 </div>
             </div>
 
             <PesanHasil />
+
+            <!-- ===== Peringatan penyimpanan ===== -->
+            <div v-if="penyimpanan.status !== 'aman'" class="brutal bg-accent-100 p-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span
+                        class="border-2 border-ink px-2 py-0.5 text-[11px] font-bold uppercase"
+                        :class="penyimpanan.status === 'lewat' ? 'bg-danger text-paper' : 'bg-accent-400 text-primary-800'"
+                    >
+                        {{ penyimpanan.status === 'lewat' ? 'Jatah terlampaui' : 'Hampir penuh' }}
+                    </span>
+                    <p class="text-sm font-bold">
+                        Pustaka Media memakai {{ penyimpanan.terpakai }} dari {{ penyimpanan.kuota }}<template v-if="penyimpanan.persen !== null"> ({{ penyimpanan.persen }}%)</template>.
+                    </p>
+                </div>
+
+                <p class="mt-2 text-sm">
+                    <template v-if="penyimpanan.status === 'lewat'">
+                        Jatah penyimpanan sudah habis. Berkasnya tetap aman dan tetap tersaji, tetapi kelebihannya mulai
+                        dihitung berbayar. Hapus berkas yang tidak terpakai, atau naikkan <code>MEDIA_KUOTA_MB</code> bila
+                        memang sudah berlangganan paket berbayar.
+                    </template>
+                    <template v-else>
+                        Sebaiknya rapikan berkas yang tidak terpakai sebelum jatah penyimpanan habis. Bila sudah berlangganan
+                        paket berbayar, naikkan <code>MEDIA_KUOTA_MB</code> supaya peringatan ini tidak terus muncul.
+                    </template>
+                </p>
+
+                <p class="mt-1 text-xs text-muted">
+                    Unggahan tetap diterima seperti biasa — ini pemberitahuan biaya, bukan pembatas.
+                </p>
+            </div>
 
             <!-- ===== Unggah ===== -->
             <form class="brutal space-y-4 bg-paper p-5" @submit.prevent="unggah">

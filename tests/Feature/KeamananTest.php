@@ -466,4 +466,48 @@ class KeamananTest extends TestCase
             (string) preg_replace('/.*?img-src[^;]*/', '', $csp, 1) ?: '',
         );
     }
+
+    /**
+     * Bila media disimpan di luar situs ini, asalnya WAJIB diizinkan.
+     *
+     * Tanpa izin itu, seluruh gambar diblokir peramban — dan yang terlihat
+     * pengurus hanyalah gambar hilang tanpa penjelasan apa pun, persis
+     * kegagalan yang sudah pernah terjadi pada alamat disk `public`.
+     */
+    public function test_kebijakan_gambar_mengizinkan_penyimpanan_luar_bila_dipakai(): void
+    {
+        config([
+            'filesystems.disks.uji-media' => [
+                'driver' => 's3',
+                'url' => 'https://media.contoh.test',
+            ],
+            'media-library.disk_name' => 'uji-media',
+        ]);
+
+        $csp = (string) $this->get('/')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('https://media.contoh.test', $csp);
+    }
+
+    /**
+     * ...dan TIDAK diizinkan selama medianya masih lokal.
+     *
+     * Domain yang diizinkan "untuk berjaga-jaga" adalah domain yang tidak
+     * pernah dipakai — dan kebijakan yang lebih longgar daripada kenyataan
+     * tidak menjaga apa pun.
+     */
+    public function test_kebijakan_gambar_tidak_mengizinkan_penyimpanan_luar_saat_disknya_lokal(): void
+    {
+        config([
+            'filesystems.disks.s3' => [
+                'driver' => 's3',
+                'url' => 'https://media.contoh.test',
+            ],
+            'media-library.disk_name' => 'public',
+        ]);
+
+        $csp = (string) $this->get('/')->headers->get('Content-Security-Policy');
+
+        $this->assertStringNotContainsString('media.contoh.test', $csp);
+    }
 }

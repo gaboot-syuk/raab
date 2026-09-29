@@ -62,6 +62,7 @@ use App\Http\Controllers\Public\PublikasiController;
 use App\Http\Controllers\Public\PrestasiController as PrestasiPublikController;
 use App\Http\Controllers\Public\PengumumanController as PengumumanPublikController;
 use App\Http\Controllers\Public\ArsipController as ArsipPublikController;
+use App\Http\Controllers\Internal\HealthController;
 use App\Http\Controllers\Internal\SchedulerController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Panel\PengumumanController as PengumumanPanelController;
@@ -263,6 +264,23 @@ Route::get('/sitemap.xml', SitemapController::class)->name('public.sitemap');
 Route::get('/internal/scheduler/{token}', SchedulerController::class)
     ->middleware('throttle:12,1')
     ->name('internal.scheduler');
+
+/*
+ * Titik pemeriksaan kesehatan — untuk pemantau uptime & penjaga tetap bangun.
+ *
+ * Di LUAR grup lokalisasi, sama seperti pemicu penjadwal di atas: alamatnya
+ * harus SATU, bukan /en/health. Layanan pemantau tidak tahu apa-apa soal
+ * bahasa, dan alamat yang bercabang membuat pendaftarannya mudah salah.
+ *
+ * Tanpa autentikasi — yang memanggilnya bukan manusia. Jawabannya juga tidak
+ * memuat rincian apa pun yang berguna bagi penyerang.
+ *
+ * Throttle dipasang supaya alamat ini tidak bisa dijadikan sasaran pembanjiran:
+ * setiap panggilan menyentuh basis data, dan itu tidak gratis.
+ */
+Route::get('/health', HealthController::class)
+    ->middleware('throttle:30,1')
+    ->name('internal.health');
 
 /*
 |--------------------------------------------------------------------------

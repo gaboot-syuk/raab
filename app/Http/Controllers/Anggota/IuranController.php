@@ -154,6 +154,18 @@ class IuranController extends Controller
         $media = MediaLibrary::induk()
             ->addMedia($berkas)
             ->usingName('Bukti iuran '.$request->user()->name)
+            /*
+             * SENGAJA masih memakai disk 'public', dan itu BELUM selesai.
+             *
+             * Bukti pembayaran tidak pantas masuk ke bucket media yang dapat
+             * dibaca siapa saja. Tetapi membiarkannya di disk 'public' berarti
+             * berkasnya hilang setiap wadah dinyalakan ulang — di hosting
+             * dengan sistem berkas sementara, keduanya sama-sama merugikan.
+             *
+             * Yang dibutuhkan: penyimpanan PERMANEN yang PRIVAT (bucket R2
+             * terpisah, atau awalan privat dengan URL bertanda tangan). Itu
+             * keputusan pengurus, bukan sesuatu yang pantas ditebak di sini.
+             */
             ->toMediaCollection('dokumen', 'public');
 
         return (int) $media->id;
