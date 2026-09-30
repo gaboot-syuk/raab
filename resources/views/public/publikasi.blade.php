@@ -7,6 +7,7 @@
 @endphp
 
 @section('judul', $judulHalaman)
+@section('og_gambar', asset('og/publikasi.png'))
 @section('deskripsi', __('umum.publikasi.deskripsi'))
 
 @section('konten')

@@ -1,3 +1,5 @@
+@props(['mandiri' => false])
+
 @php
     /**
      * Tombol "Pasang aplikasi" — pintasan ke layar utama.
@@ -17,7 +19,17 @@
      *  - iOS TIDAK punya API pemasangan sama sekali. Satu-satunya jalan adalah
      *    menu Bagikan di Safari, jadi tombol ini menampilkan panduan
      *    langkah demi langkah.
+     *
+     * DUA RUPA, karena tempatnya berbeda:
+     *
+     *  - Di layar lebar ia duduk di dalam grup tema dan cukup memakai garis
+     *    pemisah (`mandiri = false`).
+     *  - Di bilah atas ponsel ia berdiri sendiri, jadi butuh bingkai penuh
+     *    seperti tombol di sebelahnya (`mandiri = true`).
      */
+    $kelasTombol = $mandiri
+        ? 'border-2 border-ink bg-paper px-2 py-1 text-xs font-bold uppercase text-ink hover:bg-accent-100'
+        : 'border-l-2 border-ink px-2 py-1 text-ink hover:bg-accent-100';
 @endphp
 
 <div x-data="pasangAplikasi" x-init="inisialisasi()">
@@ -26,7 +38,7 @@
         x-show="tampil"
         x-cloak
         @click="pasang()"
-        class="border-l-2 border-ink px-2 py-1 text-ink hover:bg-accent-100"
+        class="{{ $kelasTombol }}"
         title="{{ __('umum.pasang.label') }}"
     >
         <span class="sr-only">{{ __('umum.pasang.label') }}</span>

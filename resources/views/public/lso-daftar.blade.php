@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('organisasi.lso.judul'))
+@section('og_gambar', asset('og/lso.png'))
 @section('deskripsi', __('organisasi.lso.intro'))
 
 @section('konten')

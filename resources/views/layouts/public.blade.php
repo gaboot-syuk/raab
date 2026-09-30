@@ -12,7 +12,40 @@
     $namaSitus = $situsSeo['nama_rayon'] ?? __('umum.nama_organisasi');
     $judulHalaman = trim($__env->yieldContent('judul')) ?: ($situsSeo['seo_judul'] ?? $namaSitus);
     $deskripsiHalaman = trim($__env->yieldContent('deskripsi')) ?: ($situsSeo['seo_deskripsi'] ?? __('umum.footer.tentang_teks'));
-    $gambarSeo = $situsSeo['og_image'] ?? asset('brand/logo-pmii-raab.png');
+    /*
+     * Gambar pratinjau tautan (og:image), berurut dari yang paling khusus:
+     *
+     *   1. @section('og_gambar') — gambar halaman itu sendiri. Artikel memakai
+     *      gambar covernya, dan itulah yang paling mewakili isi tautannya.
+     *   2. `og_image` pada Pengaturan Situs — SATU gambar seragam untuk seluruh
+     *      situs.
+     *   3. gambar bawaan di public/og/.
+     *
+     * Yang paling khusus menang: artikel yang punya cover tetap memakai
+     * covernya walau ada gambar seragam.
+     *
+     * CATATAN JUJUR soal langkah 2: `og_image` TIDAK ADA di seeder maupun di
+     * panel, jadi hari ini langkah itu tidak pernah terpakai — nilainya selalu
+     * kosong dan yang berjalan selalu langkah 3. Barisnya sengaja tetap ada
+     * supaya menambahkan pengaturan itu kelak cukup dilakukan di panel, tanpa
+     * perlu menyentuh berkas ini. Percobaan pertama saya menuliskan seolah
+     * pengurus memang bisa menyetelnya; itu tidak benar, dan komentar yang
+     * menjanjikan hal yang tidak ada lebih buruk daripada tidak ada komentar.
+     *
+     * Alamatnya WAJIB lengkap (ada https://…). Pengikis tautan WhatsApp dan
+     * Facebook tidak menjalankan kode kita; alamat relatif tidak bisa mereka
+     * selesaikan. Karena itu di sini url()/asset() memang benar dipakai —
+     * berbeda dengan gambar DI DALAM halaman, yang justru harus relatif supaya
+     * tidak diblokir CSP saat APP_URL tidak sama dengan domain yang dibuka.
+     */
+    $gambarHalaman = trim($__env->yieldContent('og_gambar'));
+    $gambarSeo = $gambarHalaman !== '' ? $gambarHalaman : trim((string) ($situsSeo['og_image'] ?? ''));
+
+    if ($gambarSeo !== '' && ! str_starts_with($gambarSeo, 'http')) {
+        $gambarSeo = url($gambarSeo);
+    }
+
+    $gambarSeo = $gambarSeo !== '' ? $gambarSeo : asset('og/bawaan.png');
     $urlSeo = \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getLocalizedURL(app()->getLocale());
 @endphp
 <!DOCTYPE html>

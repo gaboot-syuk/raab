@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', $unit->nama)
+@section('og_gambar', asset('og/lso.png'))
 @section('deskripsi', Str::limit(strip_tags((string) $unit->getTranslation('deskripsi', 'id', false)), 150))
 
 @section('konten')

@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('pustaka.inventaris.judul'))
+@section('og_gambar', asset('og/inventaris.png'))
 @section('deskripsi', __('pustaka.inventaris.intro'))
 
 @section('konten')

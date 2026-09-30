@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', $kader->nama_lengkap)
+@section('og_gambar', asset('og/kader.png'))
 @section('deskripsi', __('organisasi.kader.judul').' '.$kader->nama_lengkap)
 
 @section('konten')

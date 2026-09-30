@@ -22,6 +22,15 @@
 @endphp
 
 @section('judul', $judulSeo)
+
+{{--
+    Gambar pratinjau artikel memakai GAMBAR COVERNYA SENDIRI, bukan gambar
+    halaman publikasi. Inilah yang membuat setiap artikel punya pratinjau yang
+    berbeda saat tautannya dibagikan — dan gambar itulah yang paling mewakili
+    isinya. Halaman tetap kebagian gambar bawaan bila artikelnya belum punya
+    cover.
+--}}
+@section('og_gambar', $sampul ?? asset('og/publikasi.png'))
 @section('deskripsi', $deskripsiSeo)
 @section('og_tipe', 'article')
 

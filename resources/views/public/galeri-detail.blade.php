@@ -3,6 +3,7 @@
 @php $judulAlbum = $album->getTranslation('judul', app()->getLocale(), false) ?: $album->getTranslation('judul', 'id'); @endphp
 
 @section('judul', $judulAlbum)
+@section('og_gambar', asset('og/galeri.png'))
 @section('deskripsi', Str::limit(strip_tags((string) $album->getTranslation('deskripsi', 'id', false)), 150))
 
 @section('konten')

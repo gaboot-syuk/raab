@@ -124,6 +124,18 @@
         <div class="flex items-center gap-2">
             <x-public.locale-switch />
 
+            {{--
+                Tombol pasang aplikasi untuk PONSEL, di bilah atas.
+
+                Di layar lebar tombol ini berada di dalam grup tema, tetapi
+                grup itu baru muncul setelah laci dibuka — jadi di ponsel ia
+                praktis tidak pernah terlihat. Pintasan ke layar utama justru
+                fitur untuk ponsel, jadi bilah atas-lah tempatnya.
+            --}}
+            <div class="lg:hidden">
+                <x-public.tombol-pasang mandiri />
+            </div>
+
             <div class="hidden lg:block">
                 <x-public.theme-toggle />
             </div>

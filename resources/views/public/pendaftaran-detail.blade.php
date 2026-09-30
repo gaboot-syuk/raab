@@ -16,6 +16,7 @@
 @endphp
 
 @section('judul', $judul)
+@section('og_gambar', asset('og/pendaftaran.png'))
 @section('deskripsi', Str::limit(strip_tags((string) $deskripsi), 150))
 
 @section('konten')

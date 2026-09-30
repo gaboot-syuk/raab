@@ -1,6 +1,24 @@
 @extends('layouts.public')
 
+@php
+    /*
+     * Setiap halaman statis punya gambar pratinjaunya sendiri.
+     *
+     * Pemetaannya ditulis EKSPLISIT karena kunci halaman memakai garis bawah
+     * (`visi_misi`) sedangkan nama berkasnya memakai tanda hubung. Menurunkan
+     * nama berkas dari kuncinya akan menghasilkan alamat yang tidak ada — dan
+     * kegagalannya senyap: pratinjau tautannya hanya kosong tanpa galat.
+     */
+    $gambarPratinjau = match ($halaman->kunci) {
+        'sejarah' => 'og/sejarah.png',
+        'visi_misi' => 'og/visi-misi.png',
+        'sambutan' => 'og/sambutan.png',
+        default => 'og/bawaan.png',
+    };
+@endphp
+
 @section('judul', $halaman->judul)
+@section('og_gambar', asset($gambarPratinjau))
 @section('deskripsi', $halaman->ringkasan ?? $halaman->judul)
 
 @section('konten')

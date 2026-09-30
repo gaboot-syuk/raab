@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('umum.menu.prestasi'))
+@section('og_gambar', asset('og/prestasi.png'))
 @section('deskripsi', __('kartu.prestasi.intro'))
 
 @section('konten')

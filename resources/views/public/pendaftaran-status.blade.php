@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('pendaftaran.cek.judul'))
+@section('og_gambar', asset('og/pendaftaran.png'))
 @section('deskripsi', __('pendaftaran.cek.intro'))
 
 @section('konten')

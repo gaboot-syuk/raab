@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', $buku->judulTeks())
+@section('og_gambar', asset('og/buku.png'))
 @section('deskripsi', Str::limit(strip_tags((string) $buku->getTranslation('sinopsis', 'id', false)), 150))
 
 @section('konten')

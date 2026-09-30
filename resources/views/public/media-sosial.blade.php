@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('umum.sosmed.judul'))
+@section('og_gambar', asset('og/media-sosial.png'))
 @section('deskripsi', __('umum.sosmed.deskripsi'))
 
 @section('konten')

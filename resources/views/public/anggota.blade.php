@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('umum.menu.anggota'))
+@section('og_gambar', asset('og/anggota.png'))
 @section('deskripsi', __('umum.direktori.anggota_deskripsi'))
 
 @section('konten')

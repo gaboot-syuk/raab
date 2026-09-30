@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
 @section('judul', __('umum.menu.alumni'))
+@section('og_gambar', asset('og/alumni.png'))
 @section('deskripsi', __('umum.direktori.alumni_deskripsi'))
 
 {{-- Leaflet dimuat hanya di halaman ini — tidak perlu memberatkan halaman lain. --}}
