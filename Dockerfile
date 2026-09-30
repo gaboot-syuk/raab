@@ -139,7 +139,23 @@ RUN set -e; \
 # Pekerja antrean dijalankan sebagai proses terpisah di dalam wadah ini, dan
 # `queue:work` adalah proses panjang — batas waktunya harus dimatikan, kalau
 # tidak PHP akan menghentikannya di tengah jalan.
-RUN printf 'memory_limit = 256M\nupload_max_filesize = 20M\npost_max_size = 21M\nmax_execution_time = 0\n' \
+#
+# UKURAN UNGGAHAN — JANGAN PERNAH MENYAMAKAN post_max_size DENGAN BATAS PER BERKAS.
+#
+# Nilainya dulu 20M/21M, dan itu membuat UNGGAHAN BANYAK BERKAS GAGAL TANPA
+# PESAN APA PUN. `upload_max_filesize` membatasi SATU berkas; `post_max_size`
+# membatasi SELURUH permintaan. Pustaka Media menerima sampai 20 berkas
+# sekaligus dengan batas 10 MB per berkas (MediaController::MAKS_KB), jadi
+# janjinya sekitar 200 MB — sementara PHP sudah menolak apa pun di atas 21 MB.
+#
+# Ketika post_max_size terlampaui, PHP MEMBUANG SELURUH isi permintaan sebelum
+# Laravel melihatnya: $_POST kosong, $_FILES kosong, bahkan token CSRF hilang.
+# Yang terlihat pengurus hanyalah modal galat tanpa penjelasan. Batasnya harus
+# mengikuti janji kode aplikasi, bukan sebaliknya.
+#
+# upload_max_filesize sengaja 12M, bukan tepat 10M: batas aplikasi dihitung
+# dari isi berkas, sedangkan PHP menghitung seluruh bagian multipartnya.
+RUN printf 'memory_limit = 256M\nupload_max_filesize = 12M\npost_max_size = 224M\nmax_execution_time = 0\n' \
         > /usr/local/etc/php/conf.d/raab.ini \
     && printf 'opcache.enable=1\nopcache.validate_timestamps=0\nopcache.memory_consumption=128\n' \
         > /usr/local/etc/php/conf.d/raab-opcache.ini

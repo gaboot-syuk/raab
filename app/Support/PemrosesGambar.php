@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Intervention\Image\Drivers\Gd\Driver as DriverGd;
+use Intervention\Image\Drivers\Imagick\Driver as DriverImagick;
 use Intervention\Image\ImageManager;
 
 /**
@@ -29,6 +31,32 @@ class PemrosesGambar
     public const MUTU = 82;
 
     /**
+     * Nama KELAS pengandar gambar yang akan dipakai.
+     *
+     * JANGAN mengisi ini dengan julukan seperti 'gd'.
+     *
+     * Percobaan pertama saya menulis `new ImageManager('gd')`, dan itu TERBACA
+     * masuk akal — dokumentasi lama memang memakai julukan. Tetapi v4 tidak
+     * menerima julukan: `CanResolveDriver::resolveDriver()` menolak apa pun
+     * yang bukan nama kelas yang benar-benar ada, dengan pesan
+     * "Argument $driver must be existing class name".
+     *
+     * Kegagalannya tidak pernah terlihat sebagai galat besar: pendengar
+     * pengecil gambar menangkapnya dan hanya menulis satu baris WARNING,
+     * sedangkan wadah pengembangan memang tidak punya GD sehingga baris itu
+     * tidak pernah muncul di sini. Pengecilan gambar karena itu TIDAK PERNAH
+     * bekerja sekali pun, dan tidak ada yang tahu.
+     *
+     * Sekarang nama pengandar diambil dari kelas aslinya, sehingga salah tulis
+     * tidak mungkin lagi — dan `MediaUnggahTest` memeriksa bahwa nama ini
+     * memang kelas yang ada dan mengimplementasikan DriverInterface.
+     */
+    public static function pengandar(): string
+    {
+        return extension_loaded('imagick') ? DriverImagick::class : DriverGd::class;
+    }
+
+    /**
      * Kembalikan isi gambar yang sudah diperkecil, atau null bila tidak ada
      * yang perlu dikerjakan.
      *
@@ -36,7 +64,7 @@ class PemrosesGambar
      */
     public function perkecil(string $isi, string $ekstensi): ?string
     {
-        $gambar = (new ImageManager('gd'))->decodeBinary($isi);
+        $gambar = (new ImageManager(self::pengandar()))->decodeBinary($isi);
 
         // Sudah cukup kecil: menyimpan ulang hanya menurunkan mutunya tanpa
         // menghemat ruang yang berarti.

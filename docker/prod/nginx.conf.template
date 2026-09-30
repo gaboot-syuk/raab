@@ -29,7 +29,22 @@ http {
     keepalive_timeout 65;
 
     # Unggahan poster kegiatan dan berkas arsip bisa cukup besar.
-    client_max_body_size 25M;
+    #
+    # NILAI INI ADALAH BATAS KETIGA, dan dulu angkanya berbeda dari dua yang
+    # lain — 25M di sini, 21M di post_max_size PHP, sedangkan kode aplikasi
+    # menerima sampai 20 berkas sekaligus dengan batas 10 MB per berkas
+    # (MediaController::MAKS_KB). Tiga angka yang berbeda artinya unggahan
+    # banyak berkas gagal di tempat yang berbeda-beda pula, dan yang terlihat
+    # pengurus selalu sama: modal galat tanpa penjelasan.
+    #
+    #   > 25 MB  → ditolak nginx (413), permintaannya tidak pernah sampai
+    #              ke Laravel sehingga tidak ada catatan apa pun di log aplikasi
+    #  21–25 MB  → sampai ke PHP, tetapi isinya DIBUANG karena post_max_size,
+    #              sehingga token CSRF ikut hilang dan jawabannya 419
+    #
+    # Ketiganya harus sejalan. Angka di sini sama dengan post_max_size pada
+    # Dockerfile; kalau salah satu diubah, ubah keduanya.
+    client_max_body_size 224M;
 
     gzip on;
     gzip_types text/plain text/css application/javascript application/json

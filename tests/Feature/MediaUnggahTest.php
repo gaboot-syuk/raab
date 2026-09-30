@@ -10,6 +10,9 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Interfaces\DriverInterface;
+use Spatie\Image\Image;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Tests\TestCase;
 
 /**
@@ -436,5 +439,126 @@ class MediaUnggahTest extends TestCase
             ->assertSessionHas('sukses');
 
         $this->assertDatabaseCount('media', 2);
+    }
+
+    /* ==================================================================
+     | Definisi konversi gambar
+     |
+     | Uji-uji ini TIDAK menjalankan konversinya (wadah ini tidak punya GD),
+     | melainkan memeriksa definisinya: nama manipulasi yang dipakai memang
+     | ada di pustakanya, berkas dokumen tidak ikut dikonversi, dan konversinya
+     | tidak dikerjakan di dalam permintaan unggah.
+     |
+     | Sebabnya nyata: `->shrinkOnly()` pernah tertulis di sini padahal metode
+     | itu TIDAK ADA pada Spatie\Image\Image. Karena baris itu hanya berjalan
+     | di mesin bergd, salah tulisnya baru terlihat di server sebagai modal
+     | galat 500 — sesudah berkasnya terunggah.
+     ================================================================== */
+
+    /**
+     * Model Pustaka Media dengan "mesin gambar" dipaksa ada.
+     */
+    private function pustakaDenganMesinGambar(): MediaLibrary
+    {
+        return new class extends MediaLibrary
+        {
+            protected function adaMesinGambar(): bool
+            {
+                return true;
+            }
+        };
+    }
+
+    /**
+     * Catatan media dalam ingatan, hanya untuk membawa jenis berkasnya.
+     */
+    private function mediaUji(string $mime): Media
+    {
+        $media = new Media;
+        $media->mime_type = $mime;
+
+        return $media;
+    }
+
+    public function test_konversi_thumbnail_didaftarkan_untuk_gambar(): void
+    {
+        $pustaka = $this->pustakaDenganMesinGambar();
+        $pustaka->registerMediaConversions($this->mediaUji('image/jpeg'));
+
+        $this->assertCount(1, $pustaka->mediaConversions);
+        $this->assertSame('kecil', $pustaka->mediaConversions[0]->getName());
+    }
+
+    public function test_konversi_thumbnail_diantrekan_bukan_dikerjakan_di_permintaan(): void
+    {
+        /*
+         * Konversi berjalan SESUDAH berkas dan baris medianya tersimpan, dan
+         * `createDerivedFiles()` di medialibrary TIDAK dibungkus try/catch.
+         * Selama dikerjakan di dalam permintaan unggah, kegagalan gambar
+         * bentuk apa pun — termasuk kehabisan memori — selalu menjadi modal
+         * galat 500 padahal unggahannya berhasil.
+         */
+        $pustaka = $this->pustakaDenganMesinGambar();
+        $pustaka->registerMediaConversions($this->mediaUji('image/png'));
+
+        $this->assertTrue($pustaka->mediaConversions[0]->shouldBeQueued());
+    }
+
+    public function test_konversi_thumbnail_tidak_didaftarkan_untuk_dokumen(): void
+    {
+        /*
+         * `PerformConversionAction::execute()` memanggil
+         * `ImageGeneratorFactory::forMedia($media)->convert(...)` tanpa
+         * memeriksa null, padahal fungsi itu boleh mengembalikan null. Untuk
+         * DOCX/XLSX/PPTX (dan PDF yang butuh pustaka tambahan) hasilnya
+         * "Call to a member function convert() on null" — 500 juga.
+         */
+        $pustaka = $this->pustakaDenganMesinGambar();
+
+        $pustaka->registerMediaConversions($this->mediaUji(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ));
+
+        $this->assertSame([], $pustaka->mediaConversions);
+    }
+
+    public function test_setiap_manipulasi_konversi_ada_di_pustaka_gambar(): void
+    {
+        $pustaka = $this->pustakaDenganMesinGambar();
+        $pustaka->registerMediaConversions($this->mediaUji('image/jpeg'));
+
+        $manipulasi = [];
+
+        foreach ($pustaka->mediaConversions as $konversi) {
+            $manipulasi = [...$manipulasi, ...array_keys($konversi->getManipulations()->toArray())];
+        }
+
+        $this->assertNotEmpty($manipulasi, 'Konversi didaftarkan tanpa manipulasi apa pun.');
+
+        foreach ($manipulasi as $nama) {
+            $this->assertTrue(
+                method_exists(Image::class, $nama),
+                "Manipulasi '{$nama}' tidak ada di ".Image::class.' — konversi akan gagal saat dijalankan.',
+            );
+        }
+    }
+
+    public function test_pengandar_gambar_yang_dipakai_adalah_kelas_yang_ada(): void
+    {
+        /*
+         * `CanResolveDriver::resolveDriver()` menolak apa pun yang bukan nama
+         * kelas. `new ImageManager('gd')` — yang dulu tertulis di
+         * PemrosesGambar — melempar "Argument $driver must be existing class
+         * name". Kegagalannya ditangkap pendengar pengecil gambar dan hanya
+         * menjadi satu baris WARNING, yang tidak pernah muncul di wadah tanpa
+         * GD; pengecilan gambar karena itu TIDAK PERNAH bekerja sekali pun.
+         */
+        $pengandar = PemrosesGambar::pengandar();
+
+        $this->assertTrue(class_exists($pengandar), "Pengandar gambar '{$pengandar}' bukan kelas yang ada.");
+        $this->assertTrue(
+            is_subclass_of($pengandar, DriverInterface::class),
+            "Pengandar gambar '{$pengandar}' bukan implementasi ".DriverInterface::class.'.',
+        );
     }
 }
