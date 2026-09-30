@@ -666,6 +666,143 @@ class OrganisasiTest extends TestCase
         $this->assertNull($orang->fresh()->unit_id);
     }
 
+    /* ========== Konten Manager & halaman Biro/LSO ==========
+     |
+     | Konten Manager mengurus ISI halaman Biro & LSO, bukan kerangka
+     | organisasinya. Batas itu diuji di sini supaya pemberian izinnya tidak
+     | diam-diam melebar kelak — menambah satu kelompok izin di seeder mudah,
+     | menyadari bahwa kelompoknya juga membawa `units.delete` tidak.
+     ======================================================= */
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function muatanProfilUnit(string $nama): array
+    {
+        return [
+            'jenis' => OrganisationUnit::JENIS_LSO,
+            'nama' => $nama,
+            'singkatan' => 'LKO',
+            'deskripsi' => ['id' => 'Ruang tulis kader.', 'en' => 'A writing space.'],
+            'warna' => 'accent-400',
+            'urutan' => 4,
+            'aktif' => true,
+        ];
+    }
+
+    public function test_konten_manager_dapat_membuka_dan_menyunting_profil_unit(): void
+    {
+        $unit = $this->lso('LSO Konten');
+        $konten = $this->pengurus('konten_manager');
+
+        // Menunya muncul karena `units.view`, dan halamannya terbuka.
+        $this->actingAs($konten)->get('/panel/organisasi/unit')->assertOk();
+        $this->actingAs($konten)->get('/panel/organisasi/unit/'.$unit->id)->assertOk();
+
+        $this->actingAs($konten)
+            ->put('/panel/organisasi/unit/'.$unit->id, $this->muatanProfilUnit('LSO Konten'))
+            ->assertSessionHas('sukses');
+
+        $unit->refresh();
+        $this->assertSame('LKO', $unit->singkatan);
+        $this->assertSame('Ruang tulis kader.', $unit->getTranslation('deskripsi', 'id'));
+        $this->assertSame(4, $unit->urutan);
+    }
+
+    public function test_konten_manager_tidak_dapat_membuat_atau_menghapus_unit(): void
+    {
+        /*
+         * Membuat dan menghapus unit mengubah KERANGKA organisasi, bukan
+         * isinya. Itu tetap milik Sekretaris.
+         */
+        $unit = $this->lso('LSO Jangan Diubah');
+        $konten = $this->pengurus('konten_manager');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/unit', $this->muatanProfilUnit('LSO Baru'))
+            ->assertForbidden();
+
+        $this->actingAs($konten)
+            ->delete('/panel/organisasi/unit/'.$unit->id)
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('organisation_units', ['nama' => 'LSO Baru']);
+        $this->assertDatabaseHas('organisation_units', ['nama' => 'LSO Jangan Diubah']);
+    }
+
+    public function test_konten_manager_tidak_dapat_mengubah_keanggotaan_unit(): void
+    {
+        // Keanggotaan mengubah data ANGGOTA (members.update), bukan isi halaman.
+        $unit = $this->lso('LSO Anggota Tetap');
+        $orang = $this->anggota(['nama_lengkap' => 'Anggota Tetap']);
+        $konten = $this->pengurus('konten_manager');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/unit/'.$unit->id.'/anggota', ['member_id' => $orang->id])
+            ->assertForbidden();
+
+        $this->assertNull($orang->fresh()->unit_id);
+    }
+
+    public function test_konten_manager_tidak_dapat_menata_pengurus_unit(): void
+    {
+        $unit = $this->lso('LSO Pengurus Tetap');
+        $konten = $this->pengurus('konten_manager');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/jabatan', ['nama' => 'Kabiro Baru', 'level' => 2, 'unit_id' => $unit->id])
+            ->assertForbidden();
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/penugasan', ['period_id' => 1, 'position_id' => 1, 'nama_manual' => 'Siapa Saja'])
+            ->assertForbidden();
+    }
+
+    public function test_konten_manager_tetap_dapat_mengelola_agenda_unit(): void
+    {
+        /*
+         * Galeri dan agenda unit sudah dipegang Konten Manager sebelum
+         * perubahan izin ini. Diuji ulang supaya pengelompokan izin yang baru
+         * tidak diam-diam mencabutnya.
+         */
+        $unit = $this->lso('LSO Agenda Konten');
+        $konten = $this->pengurus('konten_manager');
+
+        $this->actingAs($konten)
+            ->post('/panel/organisasi/agenda', [
+                'unit_id' => $unit->id,
+                'judul' => ['id' => 'Diskusi Bulanan'],
+                'mulai' => '2026-10-20 19:00:00',
+                'publik' => true,
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('unit_agendas', 1);
+    }
+
+    public function test_sekretaris_tetap_dapat_membuat_dan_menghapus_unit(): void
+    {
+        // Pemberian izin kepada Konten Manager tidak boleh mengurangi hak
+        // Sekretaris sedikit pun.
+        $sekretaris = $this->pengurus('sekretaris');
+
+        $this->actingAs($sekretaris)
+            ->post('/panel/organisasi/unit', [
+                'jenis' => OrganisationUnit::JENIS_LSO,
+                'nama' => 'LSO Baru Sekretaris',
+                'aktif' => true,
+            ])
+            ->assertSessionHas('sukses');
+
+        $baru = OrganisationUnit::query()->where('nama', 'LSO Baru Sekretaris')->firstOrFail();
+
+        $this->actingAs($sekretaris)
+            ->delete('/panel/organisasi/unit/'.$baru->id)
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseMissing('organisation_units', ['nama' => 'LSO Baru Sekretaris']);
+    }
+
     /* ===================== Anggota & alumni ===================== */
 
     public function test_slug_anggota_dibuat_otomatis_dan_unik(): void

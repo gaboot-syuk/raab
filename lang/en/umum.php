@@ -69,8 +69,20 @@ return [
         'label' => 'Theme',
         'terang' => 'Light',
         'gelap' => 'Dark',
-        'sistem' => 'System',
         'ganti' => 'Change theme',
+    ],
+
+    'pasang' => [
+        'label' => 'Install app',
+        'judul' => 'Add to Home Screen',
+        'pengantar' => 'This shortcut opens the site like an app — without an address bar. It does not store the site content, so it still needs a connection.',
+        'langkah' => [
+            'Tap the Share button in the Safari toolbar.',
+            'Scroll down, then choose “Add to Home Screen”.',
+            'Tap “Add” in the top right corner.',
+        ],
+        'catatan_ios' => 'On iPhone only Safari offers this menu. If you opened this in another browser, open the page in Safari first.',
+        'tutup' => 'Close',
     ],
 
     'bahasa' => [

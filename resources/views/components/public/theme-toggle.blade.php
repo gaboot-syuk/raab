@@ -1,7 +1,24 @@
 @php
     /**
-     * Tombol tema: Terang → Gelap → Ikut sistem.
-     * Logika ada di Alpine.data('pengalihTema') pada resources/js/app.js
+     * Tombol tema: Terang · Gelap, ditambah tombol Pasang aplikasi.
+     *
+     * Dulu ada tombol KETIGA di sini: "Ikut sistem" (ikon monitor). Tempatnya
+     * sekarang dipakai `<x-public.tombol-pasang />`, jadi pilihan itu tidak
+     * lagi bisa ditekan.
+     *
+     * Perilaku "ikut sistem" TIDAK hilang bagi pengunjung baru: selama belum
+     * pernah memilih, temanya memang mengikuti pengaturan perangkat (lihat
+     * kedua skrip: anti-kedip di kerangka halaman dan `terapkan()` di bawah).
+     * Yang hilang hanyalah kemampuan KEMBALI ke mode itu setelah memilih —
+     * itu harga dari satu tempat di header, dan disengaja.
+     *
+     * Karena itu tombol di sini menandai TEMA YANG SEDANG BERLAKU (`gelap`),
+     * bukan pilihan yang tersimpan (`tema`). Kalau ditandai dari pilihan
+     * tersimpan, pengunjung yang masih mengikuti sistem tidak akan melihat
+     * satu tombol pun menyala — dan tombol tema yang tampak tak berfungsi
+     * adalah keluhan yang sudah pernah terjadi di proyek ini.
+     *
+     * Logika ada di Alpine.data('pengalihTema') pada resources/js/app.js.
      */
 @endphp
 
@@ -9,9 +26,9 @@
     <button
         type="button"
         @click="pilih('terang')"
-        :class="tema === 'terang' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
+        :class="!gelap ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
         class="px-2 py-1"
-        :aria-pressed="tema === 'terang'"
+        :aria-pressed="!gelap"
         title="{{ __('umum.tema.terang') }}"
     >
         <span class="sr-only">{{ __('umum.tema.terang') }}</span>
@@ -24,9 +41,9 @@
     <button
         type="button"
         @click="pilih('gelap')"
-        :class="tema === 'gelap' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
+        :class="gelap ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
         class="border-l-2 border-ink px-2 py-1"
-        :aria-pressed="tema === 'gelap'"
+        :aria-pressed="gelap"
         title="{{ __('umum.tema.gelap') }}"
     >
         <span class="sr-only">{{ __('umum.tema.gelap') }}</span>
@@ -35,18 +52,5 @@
         </svg>
     </button>
 
-    <button
-        type="button"
-        @click="pilih('sistem')"
-        :class="tema === 'sistem' ? 'bg-accent-400 text-primary-800' : 'text-ink hover:bg-accent-100'"
-        class="border-l-2 border-ink px-2 py-1"
-        :aria-pressed="tema === 'sistem'"
-        title="{{ __('umum.tema.sistem') }}"
-    >
-        <span class="sr-only">{{ __('umum.tema.sistem') }}</span>
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="12" rx="1" />
-            <path d="M8 20h8M12 16v4" stroke-linecap="square" />
-        </svg>
-    </button>
+    <x-public.tombol-pasang />
 </div>

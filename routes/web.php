@@ -47,6 +47,7 @@ use App\Http\Controllers\Panel\SliderController;
 use App\Http\Controllers\Panel\VerifikasiController;
 use App\Http\Controllers\Public\BerandaController;
 use App\Http\Controllers\Public\DirektoriController;
+use App\Http\Controllers\Public\ManifestController;
 use App\Http\Controllers\Public\PendaftaranController;
 use App\Http\Controllers\Public\AspirasiController as AspirasiPublikController;
 use App\Http\Controllers\Public\GaleriController as GaleriPublikController;
@@ -264,6 +265,18 @@ Route::get('/sitemap.xml', SitemapController::class)->name('public.sitemap');
 Route::get('/internal/scheduler/{token}', SchedulerController::class)
     ->middleware('throttle:12,1')
     ->name('internal.scheduler');
+
+/*
+ * Manifest aplikasi web — untuk memasang situs sebagai pintasan layar utama.
+ *
+ * Di LUAR grup lokalisasi, sama seperti dua alamat di bawah ini: peramban
+ * mencari manifestnya di SATU alamat tetap yang ditulis di <link rel="manifest">.
+ * Kalau ia ikut berprefiks bahasa, halaman Indonesia akan menunjuk manifest
+ * yang tidak ada — dan kegagalannya senyap, karena peramban hanya berhenti
+ * menawarkan pemasangan.
+ */
+Route::get('/manifest.webmanifest', ManifestController::class)
+    ->name('public.manifest');
 
 /*
  * Titik pemeriksaan kesehatan — untuk pemantau uptime & penjaga tetap bangun.

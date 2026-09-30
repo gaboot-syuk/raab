@@ -10,6 +10,7 @@
  * agenda; hanya keanggotaan unit yang punya endpoint sendiri di sini.
  */
 import PesanHasil from '@/Components/Panel/PesanHasil.vue';
+import { useIzin } from '@/composables/useIzin';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -93,6 +94,21 @@ const props = defineProps<{
 }>();
 
 const kelola = ref<'profil' | 'pengurus' | 'anggota' | 'agenda'>('profil');
+
+/*
+ * Satu halaman, beberapa izin.
+ *
+ * Sejak Konten Manager boleh membuka halaman ini (units.view + units.update),
+ * pengunjung halaman ini TIDAK lagi selalu orang yang berhak atas semua
+ * aksinya. Tombol dan formulir yang pasti ditolak server disembunyikan, supaya
+ * tidak ada yang menekan tombol lalu hanya melihat modal galat tanpa
+ * penjelasan.
+ *
+ * Pembagiannya: profil unit → units.update · jabatan → positions.manage ·
+ * pengurus → assignments.manage · anggota → members.update ·
+ * agenda → unit-agendas.manage.
+ */
+const { boleh } = useIzin();
 
 /* ------------------------------- Profil ------------------------------- */
 
@@ -294,7 +310,7 @@ function pindahTab(tab: typeof kelola.value): void {
             </p>
 
             <!-- ============================ PROFIL ============================ -->
-            <form v-if="kelola === 'profil'" class="brutal bg-paper p-5" @submit.prevent="simpanProfil">
+            <form v-if="kelola === 'profil' && boleh('units.update')" class="brutal bg-paper p-5" @submit.prevent="simpanProfil">
                 <h2 class="font-display text-lg">Profil Unit</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -348,6 +364,12 @@ function pindahTab(tab: typeof kelola.value): void {
                 </button>
             </form>
 
+            <p v-else-if="kelola === 'profil'" class="brutal bg-paper-alt p-4 text-sm text-muted">
+                Profil unit hanya dapat disunting oleh pengurus yang memegang izin penyuntingan unit.
+                Isinya tetap bisa dibaca dari tab lain, dan tampilannya di situs dapat dilihat lewat
+                tombol Halaman Publik di atas.
+            </p>
+
             <!-- =========================== PENGURUS =========================== -->
             <section v-else-if="kelola === 'pengurus'" class="space-y-6">
                 <div class="brutal bg-paper p-5">
@@ -383,7 +405,7 @@ function pindahTab(tab: typeof kelola.value): void {
                                     <span v-if="baris.keterangan"> · {{ baris.keterangan }}</span>
                                 </p>
                             </div>
-                            <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="lepasPengurus(baris)">
+                            <button v-if="boleh('assignments.manage')" type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="lepasPengurus(baris)">
                                 Lepas
                             </button>
                         </li>
@@ -391,7 +413,7 @@ function pindahTab(tab: typeof kelola.value): void {
                 </div>
 
                 <!-- Tambah jabatan unit -->
-                <form class="brutal bg-paper p-5" @submit.prevent="simpanJabatan">
+                <form v-if="boleh('positions.manage')" class="brutal bg-paper p-5" @submit.prevent="simpanJabatan">
                     <h2 class="font-display text-lg">Tambah Jabatan di Unit Ini</h2>
                     <p class="mt-1 text-sm text-muted">Jabatan inilah yang nanti diisi nama pengurusnya.</p>
 
@@ -418,7 +440,7 @@ function pindahTab(tab: typeof kelola.value): void {
                 </form>
 
                 <!-- Tunjuk pengurus -->
-                <form v-if="jabatan.length && periode" class="brutal bg-paper p-5" @submit.prevent="tambahPengurus">
+                <form v-if="jabatan.length && periode && boleh('assignments.manage')" class="brutal bg-paper p-5" @submit.prevent="tambahPengurus">
                     <h2 class="font-display text-lg">Tunjuk Pengurus</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -481,14 +503,14 @@ function pindahTab(tab: typeof kelola.value): void {
                                     {{ orang.nomor_anggota ?? 'tanpa nomor anggota' }} · {{ orang.label_status }}
                                 </p>
                             </div>
-                            <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="lepasAnggota(orang)">
+                            <button v-if="boleh('members.update')" type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="lepasAnggota(orang)">
                                 Lepas
                             </button>
                         </li>
                     </ul>
                 </div>
 
-                <form class="brutal bg-paper p-5" @submit.prevent="tambahAnggota">
+                <form v-if="boleh('members.update')" class="brutal bg-paper p-5" @submit.prevent="tambahAnggota">
                     <h2 class="font-display text-lg">Tambah Anggota</h2>
 
                     <label class="mt-4 block">
@@ -528,14 +550,14 @@ function pindahTab(tab: typeof kelola.value): void {
                                     <span v-if="item.lokasi"> · {{ item.lokasi }}</span>
                                 </p>
                             </div>
-                            <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="hapusAgenda(item)">
+                            <button v-if="boleh('unit-agendas.manage')" type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="hapusAgenda(item)">
                                 Hapus
                             </button>
                         </li>
                     </ul>
                 </div>
 
-                <form class="brutal bg-paper p-5" @submit.prevent="simpanAgenda">
+                <form v-if="boleh('unit-agendas.manage')" class="brutal bg-paper p-5" @submit.prevent="simpanAgenda">
                     <h2 class="font-display text-lg">Tambah Agenda</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">

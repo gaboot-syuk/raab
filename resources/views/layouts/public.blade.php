@@ -49,6 +49,39 @@
     <meta name="twitter:image" content="{{ $gambarSeo }}">
 
     {{--
+        Pintasan ke layar utama.
+
+        `display: standalone` di dalam manifest-lah yang membuat pintasannya
+        terbuka TANPA bilah alamat — di situlah bedanya dengan sekadar penanda
+        buku. Tag `apple-*` diperlukan karena iOS tidak membaca sebagian besar
+        isi manifest dan tidak punya API pemasangan sama sekali.
+
+        TIDAK ADA service worker di sini, dan itu disengaja: situs ini tidak
+        dirancang untuk dibaca tanpa jaringan. Karena itu tidak ada satu byte
+        pun yang disimpan di perangkat pengunjung.
+    --}}
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" sizes="180x180" href="/ikon/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="{{ $situsSeo['nama_singkat'] ?? __('umum.nama_singkat') }}">
+    {{--
+        `default`, BUKAN `black-translucent`.
+
+        Yang translucent memang terlihat lebih bagus — isinya sampai ke tepi
+        layar — tetapi bilah status lalu menimpa bagian atas halaman, dan
+        navigasi yang menempel di atas akan tertutup jam serta indikator
+        baterai. Situs ini belum punya penyesuaian `env(safe-area-inset-*)`,
+        jadi yang aman dipakai dulu.
+    --}}
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    {{--
+        Dua baris dengan `media` supaya warna bilahnya ikut mode gelap.
+    --}}
+    <meta name="theme-color" content="#2e3192" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#12120f" media="(prefers-color-scheme: dark)">
+
+    {{--
         Data terstruktur organisasi. Ditulis sekali di kerangka halaman karena
         berlaku untuk SELURUH halaman, bukan hanya beranda — mesin pencari
         membaca data ini untuk mengenali rayon sebagai sebuah organisasi,

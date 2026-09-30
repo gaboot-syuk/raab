@@ -69,8 +69,28 @@ return [
         'label' => 'Tema',
         'terang' => 'Terang',
         'gelap' => 'Gelap',
-        'sistem' => 'Ikut Sistem',
         'ganti' => 'Ganti tema',
+    ],
+
+    /*
+     * Pintasan ke layar utama.
+     *
+     * Dikatakan terus terang bahwa ini BUKAN untuk membaca tanpa jaringan:
+     * tidak ada service worker di baliknya, jadi isi situs tidak disimpan di
+     * perangkat. Menjanjikan "bisa dibuka offline" yang tidak ditepati jauh
+     * lebih buruk daripada tidak menawarkannya sejak awal.
+     */
+    'pasang' => [
+        'label' => 'Pasang aplikasi',
+        'judul' => 'Pasang ke Layar Utama',
+        'pengantar' => 'Pintasan ini membuka situs seperti aplikasi — tanpa bilah alamat. Ia tidak menyimpan isi situs, jadi tetap membutuhkan internet.',
+        'langkah' => [
+            'Ketuk tombol Bagikan di bilah Safari.',
+            'Gulir ke bawah, lalu pilih “Tambahkan ke Layar Utama”.',
+            'Ketuk “Tambah” di kanan atas.',
+        ],
+        'catatan_ios' => 'Di iPhone hanya Safari yang menyediakan menu ini. Kalau Anda membukanya lewat peramban lain, buka dulu halamannya di Safari.',
+        'tutup' => 'Tutup',
     ],
 
     'bahasa' => [

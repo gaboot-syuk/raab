@@ -7,9 +7,10 @@
  */
 import PesanHasil from '@/Components/Panel/PesanHasil.vue';
 import { useGulirKeForm } from '@/composables/useGulirKeForm';
+import { useIzin } from '@/composables/useIzin';
 import PanelLayout from '@/Layouts/PanelLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Unit {
     id: number;
@@ -33,6 +34,19 @@ const props = defineProps<{ daftar: Unit[]; jenis: Record<string, string> }>();
 const sunting = ref<number | null>(null);
 const saringJenis = ref('');
 const { wadah, gulirKeForm } = useGulirKeForm();
+const { boleh } = useIzin();
+
+const bolehTambah = computed(() => boleh('units.create'));
+const bolehSunting = computed(() => boleh('units.update'));
+const bolehHapus = computed(() => boleh('units.delete'));
+
+/*
+ * Konten Manager punya units.view + units.update, tetapi TIDAK punya
+ * units.create. Formulirnya dipakai untuk dua maksud sekaligus, jadi ia hanya
+ * boleh tampil saat memang bisa dipakai: ketika menambah (butuh units.create)
+ * atau sedang menyunting satu unit (butuh units.update).
+ */
+const tampilkanForm = computed(() => bolehTambah.value || (sunting.value !== null && bolehSunting.value));
 
 const form = useForm({
     jenis: 'lso',
@@ -98,7 +112,7 @@ function hapus(unit: Unit): void {
                 </p>
             </div>
 
-            <form ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
+            <form v-if="tampilkanForm" ref="wadah" class="brutal bg-paper p-5" @submit.prevent="simpan">
                 <h2 class="font-display text-lg">{{ sunting ? 'Sunting Unit' : 'Tambah Unit' }}</h2>
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -189,8 +203,8 @@ function hapus(unit: Unit): void {
                             <Link :href="`/panel/organisasi/unit/${unit.id}`" class="brutal-sm bg-accent-400 px-3 py-1.5 text-xs font-bold text-primary-800">
                                 Kelola
                             </Link>
-                            <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="mulaiSunting(unit)">Sunting</button>
-                            <button type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="hapus(unit)">Hapus</button>
+                            <button v-if="bolehSunting" type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="mulaiSunting(unit)">Sunting</button>
+                            <button v-if="bolehHapus" type="button" class="brutal-sm bg-paper-alt px-3 py-1.5 text-xs font-bold" @click="hapus(unit)">Hapus</button>
                         </div>
                     </li>
                 </ul>

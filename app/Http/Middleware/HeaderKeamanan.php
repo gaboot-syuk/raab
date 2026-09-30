@@ -106,6 +106,15 @@ class HeaderKeamanan
             // sebelum berkasnya benar-benar terkirim.
             "img-src 'self' data: blob: ".$gambar,
             "font-src 'self' data:",
+            /*
+             * `manifest-src` dulu tidak ada, dan manifestnya tetap termuat
+             * karena CSP menurunkan direktif yang tidak ditulis ke
+             * `default-src 'self'`. Ditulis eksplisit di sini supaya pengetatan
+             * `default-src` di kemudian hari tidak mematikan pemasangan
+             * pintasan secara senyap — gejalanya hanya tombol pasang yang
+             * tidak pernah muncul, tanpa satu pun galat di log.
+             */
+            "manifest-src 'self'",
             "connect-src 'self' ".$captcha,
             "media-src 'self'",
             "frame-src ".$bingkai,

@@ -56,7 +56,7 @@ class RolePermissionSeeder extends Seeder
             ],
             'konten_manager' => [
                 'dasbor', 'publikasi', 'halaman', 'media', 'galeri', 'prestasi',
-                'pengumuman', 'laporan',
+                'pengumuman', 'laporan', 'unit_konten',
             ],
         ];
 
@@ -199,6 +199,28 @@ class RolePermissionSeeder extends Seeder
                 'galleries.manage',
                 'unit-agendas.manage',
                 'translations.manage',
+            ],
+
+            /*
+             * ISI halaman Biro & LSO — halaman unitnya sendiri.
+             *
+             * Sengaja TERPISAH dari kelompok 'organisasi' di atas, karena
+             * kelompok itu juga membawa units.create, units.delete,
+             * positions.manage, dan assignments.manage. Memberikan seluruhnya
+             * kepada Konten Manager berarti ia boleh MEMBENTUK ULANG struktur
+             * organisasi, padahal yang dibutuhkan hanya mengisi isinya.
+             *
+             * Jadi: boleh membuka halaman unit dan mengganti nama, singkatan,
+             * deskripsi, warna, serta status tayangnya. TIDAK boleh membuat
+             * atau menghapus unit, menata jabatan, atau memindahkan pengurus.
+             *
+             * Galeri dan agenda unit tidak perlu dicantumkan di sini — keduanya
+             * sudah masuk kelompok 'galeri' yang memang sudah dipegang Konten
+             * Manager. Daftar ini hanya menutup celah yang tersisa.
+             */
+            'unit_konten' => [
+                'units.view',
+                'units.update',
             ],
 
             // Daftar kesediaan mentor/pemateri — dibutuhkan Sekretaris untuk
