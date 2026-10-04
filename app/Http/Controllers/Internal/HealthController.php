@@ -27,6 +27,23 @@ use Illuminate\Http\JsonResponse;
  * — nama host, pengguna, pesan pengandar basis data — adalah bahan berharga
  * bagi siapa pun yang sedang memetakan sasaran, dan jalur ini terbuka tanpa
  * masuk. Rinciannya ada di log pengurus, tempat yang semestinya.
+ *
+ * KENAPA SELALU 200, BUKAN 503 SAAT BASIS DATA MATI
+ *
+ * Versi sebelumnya menjawab 503 saat basis data tidak terjangkau. Itu benar
+ * secara semantik HTTP, tetapi salah secara operasional di sini: cron-job.org
+ * dan layanan serupa menganggap setiap jawaban non-2xx sebagai kegagalan job.
+ * Saat basis data gratis sedang bangun (dan itu normal terjadi beberapa kali
+ * sehari), cron-job.org akan melaporkan "kesalahan HTTP" — padahal justru
+ * cronjob itulah yang sedang menjalankan tugasnya: membangunkan basis data.
+ *
+ * Karena itu jawabannya kini selalu 200, dengan status sesungguhnya ada di
+ * badan JSON. Pemantau uptime yang butuh membedakan "hidup" dan "hidup tapi
+ * tidak bisa melayani" tetap bisa membacanya dari kolom `basis_data`.
+ *
+ * Kalau suatu saat butuh endpoint yang benar-benar menjawab 503 untuk pemantau
+ * uptime ketat, buat jalur terpisah — misalnya /health/ketat — jangan ubah
+ * jalur ini.
  */
 class HealthController extends Controller
 {
@@ -36,18 +53,10 @@ class HealthController extends Controller
     {
         $basisDataTerjangkau = $this->pemeriksa->terjangkau();
 
-        /*
-         * Basis data yang mati dijawab 503, bukan 200.
-         *
-         * Bagi layanan penjaga tetap bangun, angka statusnya tidak penting —
-         * yang penting ada permintaan yang masuk. Tetapi bagi pemantau uptime,
-         * membedakan "hidup" dan "hidup tapi tidak bisa melayani" adalah
-         * seluruh gunanya.
-         */
         return response()->json([
             'status' => $basisDataTerjangkau ? 'ok' : 'terganggu',
             'basis_data' => $basisDataTerjangkau ? 'terjangkau' : 'tidak terjangkau',
             'waktu' => now()->toIso8601String(),
-        ], $basisDataTerjangkau ? 200 : 503);
+        ], 200);
     }
 }
